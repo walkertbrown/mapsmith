@@ -22,6 +22,7 @@ export interface Palette {
 	water: string;
 	waterInk: string;
 	wave: string;
+	bank: string; // the sand or mud along the water
 	road: string;
 	roadInk: string;
 	roof: string[];
@@ -48,9 +49,10 @@ export const LIGHT: Palette = {
 	street: '#efe6cf',
 	garden: '#e3dfbd',
 	plaza: '#e9dcc0',
-	water: '#a8c5c6',
-	waterInk: '#4e6f73',
-	wave: '#c5dad9',
+	water: '#97b9bf',
+	waterInk: '#466a70',
+	wave: '#b9d2d3',
+	bank: '#e6d39f',
 	road: '#f2ead6',
 	roadInk: '#b3a37f',
 	roof: ['#b9805f', '#a9745a', '#c08d68', '#9c6f5c', '#b48468'],
@@ -79,7 +81,8 @@ export const DARK: Palette = {
 	plaza: '#423d33',
 	water: '#1f3537',
 	waterInk: '#6f9599',
-	wave: '#2c4749',
+	wave: '#2f4d50',
+	bank: '#4a4330',
 	road: '#4a4538',
 	roadInk: '#6d6450',
 	roof: ['#8a5e47', '#7d5745', '#94694f', '#735446', '#86624e'],
@@ -128,15 +131,23 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 
 	// water
 	if (t.water.length) {
-		kids.push(g({ fill: P.water, stroke: P.waterInk, 'stroke-width': 2 }, t.water.map((w) => el('path', { d: d(w) }))));
-		kids.push(g({ fill: 'none', stroke: P.wave, 'stroke-width': 1.5, 'stroke-linecap': 'round' }, waves(t, r)));
+		kids.push(g({ fill: 'none', stroke: P.bank, 'stroke-width': f(u(18)), 'stroke-linejoin': 'round' }, t.water.map((w) => el('path', { d: d(w) }))));
 	}
 	// streets under the town, roads over the land
 	kids.push(g({ fill: P.garden }, t.wards.filter((w) => w.kind === 'sparse').map((w) => el('path', { d: d(w.poly) }))));
 	kids.push(g({ fill: P.street, stroke: P.street, 'stroke-width': 1 }, t.streets.map((s) => el('path', { d: d(s) }))));
 	if (t.river) {
-		kids.push(el('path', { d: d(t.river, false), fill: 'none', stroke: P.waterInk, 'stroke-width': f(t.riverW + 4), 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
-		kids.push(el('path', { d: d(t.river, false), fill: 'none', stroke: P.water, 'stroke-width': f(t.riverW), 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+		const line = { d: d(t.river, false), fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+		kids.push(el('path', { ...line, stroke: P.bank, 'stroke-width': f(t.riverW + 4 + u(11)) }));
+		kids.push(el('path', { ...line, stroke: P.waterInk, 'stroke-width': f(t.riverW + 4) }));
+		kids.push(el('path', { ...line, stroke: P.water, 'stroke-width': f(t.riverW) }));
+		// the current: a paler thread down the middle
+		kids.push(el('path', { ...line, stroke: P.wave, 'stroke-width': f(t.riverW * 0.28), opacity: 0.8 }));
+	}
+	// the sea or lake over the river's end, so the river runs into it
+	if (t.water.length) {
+		kids.push(g({ fill: P.water, stroke: P.waterInk, 'stroke-width': 2 }, t.water.map((w) => el('path', { d: d(w) }))));
+		kids.push(g({ fill: 'none', stroke: P.wave, 'stroke-width': 1.5, 'stroke-linecap': 'round' }, waves(t, r)));
 	}
 
 	kids.push(g({ fill: P.street }, t.wards.filter((w) => w.kind === 'dense' || w.kind === 'docks').map((w) => el('path', { d: d(w.poly) }))));
