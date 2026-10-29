@@ -1,6 +1,6 @@
 # Mapsmith
 
-Town maps from a seed, drawn right in your notes.
+Town and ship maps from a seed, drawn right in your notes.
 
 ![A Mapsmith town on a river mouth with hills behind it, the temple picked and its card below](docs/demo.png)
 
@@ -35,6 +35,29 @@ name: Saltmarch
 The bar above the map changes size, water, terrain, walls and land, and **New town** rolls a new seed. Each of them rewrites the block, so what you see is always what the note says. The command **Insert a town map** adds a block with a fresh seed.
 
 The map is drawn in the colours of your theme, light or dark.
+
+## Ships
+
+Add `map: ship` and the block draws a spaceship's deck plan instead: rooms, corridors, doors, airlocks, hatches and the fittings in each room, numbered like a town's places.
+
+````
+```mapsmith
+map: ship
+seed: saltmarch
+size: freighter
+mood: derelict
+```
+````
+
+![A derelict freighter's upper deck, engineering picked and its card below](docs/ship.png)
+
+| Key | What it does |
+| --- | --- |
+| `size` | `shuttle`, `corvette`, `freighter` or `station`. Freighters and stations have two decks. |
+| `mood` | `intact`, a working ship with a crew aboard, or `derelict`, a wreck with a story of how it got that way, holes torn in the hull, hazards and salvage |
+| `deck` | Which deck to draw, `1` or `2` |
+
+Above the map is the ship's story, folded away until you open it. Click a room's number for what's in it; **Open its note** writes the room to a folder named after the ship. The bar changes size, deck and mood, and **New ship** rolls a new seed. The command **Insert a ship map** adds a ship block.
 
 ## Privacy
 
