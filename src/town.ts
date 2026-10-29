@@ -24,6 +24,7 @@ import {
 	split,
 	sub,
 	at,
+	blunt,
 	type Poly,
 	type Pt,
 } from './geom';
@@ -526,6 +527,8 @@ export function generateTown(o: Partial<TownOptions> = {}): Town {
 
 	// the wall, as lines
 	const walls = chains(wallEdges);
+	// lots cut to a sliver get their tips taken off
+	for (const b of buildings) b.poly = blunt(b.poly, 1.15, u(6));
 	const towers: Pt[] = [];
 	for (const k of keepWalls) towers.push(...k);
 	for (const w of walls) w.forEach((v, i) => (i % 2 === 0 || i === w.length - 1) && !gates.some((gt) => dist(gt.p, g.verts[v] as Pt) < u(9)) && towers.push(g.verts[v] as Pt));

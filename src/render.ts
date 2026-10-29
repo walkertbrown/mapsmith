@@ -25,6 +25,7 @@ export interface Palette {
 	road: string;
 	roadInk: string;
 	roof: string[];
+	slate: string[]; // some quarters roof in slate
 	hall: string;
 	temple: string;
 	keep: string;
@@ -53,6 +54,7 @@ export const LIGHT: Palette = {
 	road: '#f2ead6',
 	roadInk: '#b3a37f',
 	roof: ['#b9805f', '#a9745a', '#c08d68', '#9c6f5c', '#b48468'],
+	slate: ['#8c9296', '#7e868b', '#969a98'],
 	hall: '#8f6a58',
 	temple: '#c9b9a0',
 	keep: '#a3958a',
@@ -81,6 +83,7 @@ export const DARK: Palette = {
 	road: '#4a4538',
 	roadInk: '#6d6450',
 	roof: ['#8a5e47', '#7d5745', '#94694f', '#735446', '#86624e'],
+	slate: ['#5d6468', '#555c61', '#646866'],
 	hall: '#6e5244',
 	temple: '#8f8676',
 	keep: '#7a7068',
@@ -157,9 +160,15 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 	kids.push(g({ fill: P.tree, stroke: P.treeDark, 'stroke-width': 0.6 }, trees.map((c) => el('circle', { cx: f(c.x), cy: f(c.y), r: f(c.r * 0.92) }))));
 
 	// buildings
-	const roofs = t.buildings.map((b, i) => {
-		const fill =
-			b.kind === 'temple' ? P.temple : b.kind === 'keep' ? P.keep : b.kind === 'hall' || b.kind === 'warehouse' ? P.hall : (P.roof[(i * 2654435761) % P.roof.length] as string);
+	// each ward has its own share of slate roofs among the tiles
+	const slateShare = new Map<number, number>();
+	const tone = (b: Town['buildings'][number]) => {
+		if (!slateShare.has(b.ward)) slateShare.set(b.ward, r() < 0.4 ? range(r, 0.2, 0.8) : range(r, 0, 0.12));
+		const list = r() < (slateShare.get(b.ward) as number) ? P.slate : P.roof;
+		return list[Math.floor(r() * list.length)] as string;
+	};
+	const roofs = t.buildings.map((b) => {
+		const fill = b.kind === 'temple' ? P.temple : b.kind === 'keep' ? P.keep : b.kind === 'hall' || b.kind === 'warehouse' ? P.hall : tone(b);
 		const a: Record<string, string | number> = { d: d(b.poly), fill };
 		if (b.place !== undefined) {
 			a['data-place'] = b.place;

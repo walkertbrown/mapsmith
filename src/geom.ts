@@ -152,3 +152,23 @@ export function along(line: Pt[], d: number): { p: Pt; dir: Pt } {
 	}
 	return { p: line[0] ?? pt(0, 0), dir: pt(1, 0) };
 }
+
+// A polygon with its sharp outward corners cut off: any corner narrower than `min` radians loses a tip
+// `cut` long (or less, on short sides), so a lot cut into a sliver still reads as a building.
+export function blunt(p: Poly, min: number, cut: number): Poly {
+	const s = Math.sign(area(p));
+	const out: Pt[] = [];
+	p.forEach((v, i) => {
+		const a = at(p, i - 1), b = at(p, i + 1);
+		const da = sub(a, v), db = sub(b, v);
+		const ang = Math.acos(Math.max(-1, Math.min(1, dot(norm(da), norm(db)))));
+		const convex = Math.sign(cross(sub(v, a), sub(b, v))) === s;
+		if (!convex || ang >= min) {
+			out.push(v);
+			return;
+		}
+		const la = Math.hypot(da.x, da.y), lb = Math.hypot(db.x, db.y);
+		out.push(add(v, scale(norm(da), Math.min(cut, la * 0.4))), add(v, scale(norm(db), Math.min(cut, lb * 0.4))));
+	});
+	return out;
+}
