@@ -2,6 +2,8 @@
 
 Town maps from a seed, drawn right in your notes.
 
+![A Mapsmith town on a river mouth with hills behind it, the temple picked and its card below](docs/demo.png)
+
 Put a `mapsmith` block in a note and you get a walled town, a river village or a harbour city, with its streets, wards, bridges, gates, docks, fields and woods. The same seed always draws the same town, so a map in your campaign notes never changes under you.
 
 Every map has numbered places: the market, the temple, the inn, the smithy, the harbour and more. Click a number, or the building it sits on, to see the place's name, who keeps it, what it's like and a hook to start trouble with. **Open its note** writes a note for that place, in a folder named after the town, so you can keep writing about it.
