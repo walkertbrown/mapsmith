@@ -7,6 +7,7 @@ installDomHelpers();
 
 const START = '```mapsmith\nseed: saltmarch\nsize: town\nwater: estuary\nside: east\n```';
 const SHIP = '```mapsmith\nmap: ship\nseed: saltmarch\nsize: freighter\nmood: derelict\n```';
+const DUNGEON = '```mapsmith\nmap: dungeon\nseed: saltmarch\nsize: dungeon\nkind: crypt\n```';
 
 type Ctx = { sourcePath: string; addChild: (c: { load(): void }) => void; getSectionInfo: () => { text: string; lineStart: number; lineEnd: number } };
 type Proc = (src: string, el: HTMLElement, c: Ctx) => void;
@@ -48,7 +49,7 @@ app.vault.create = async (p, c) => {
 	setTimeout(draw, 0);
 	return f;
 };
-for (const [id, block] of [['try-town', START], ['try-ship', SHIP]] as const) {
+for (const [id, block] of [['try-town', START], ['try-ship', SHIP], ['try-dungeon', DUNGEON]] as const) {
 	document.querySelector('#' + id)!.addEventListener('click', () => {
 		app.notes.get('Saltmarch.md')!.content = block;
 		source.value = block;

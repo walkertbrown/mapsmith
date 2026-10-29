@@ -12,7 +12,7 @@ export const GRID_W = 512
 export const GRID_H = 512
 
 export type Side = 'N' | 'E' | 'S' | 'W'
-export type DoorKind = 'door' | 'airlock' | 'hatch' | 'window'
+export type DoorKind = 'door' | 'airlock' | 'hatch' | 'window' | 'secret' | 'arch' | 'bars' // the last three are Mapsmith's, for dungeons
 
 export interface Door {
   x: number
@@ -39,10 +39,13 @@ export type StampKind =
   | 'console' | 'chair' | 'bunk' | 'table' | 'crate' | 'cryopod' | 'locker' | 'reactor'
   | 'turret' | 'medbed' | 'ladder' | 'lift' | 'stairs' | 'vent' | 'pillar' | 'engine'
   | 'bunk2' | 'reactor2' | 'container' | 'cryobank' | 'bench' | 'airlockroom' | 'shuttle' | 'tank'
+  // Mapsmith's dungeon fittings
+  | 'altar' | 'statue' | 'chest' | 'sarcophagus' | 'well' | 'brazier' | 'bookcase' | 'barrel' | 'rubble' | 'throne' | 'bed' | 'trapdoor' | 'rack' | 'bones'
 
 /** Footprint in cells before rotation (w across, h down). */
 export const FOOTPRINT: Partial<Record<StampKind, [number, number]>> = {
   bunk2: [1, 2], reactor2: [2, 2], container: [2, 1], cryobank: [2, 2], bench: [3, 1], airlockroom: [2, 2], shuttle: [3, 2], tank: [1, 2],
+  altar: [2, 1], sarcophagus: [1, 2], bookcase: [2, 1], bed: [1, 2], rack: [2, 1],
 }
 /** Image footprints are looked up here; set by the app when a ship loads. */
 export let imageLookup: (id: string) => ImageDef | undefined = () => undefined

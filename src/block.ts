@@ -1,14 +1,15 @@
 // The `mapsmith` code block: `key: value` lines in, town options out, and back again when a button
 // changes one of them. Kept apart from main.ts so it can be tested without Obsidian.
 
+import { DUNGEON_KINDS, DUNGEON_SIZES, type DungeonKind, type DungeonSize } from './dungeon';
 import type { Mood, ShipSize } from './ship/generate';
 import type { RoomInfo } from './ship/model';
 import { DEFAULTS, LANDS, SIDES, SIZES, TERRAINS, WATERS, type Land, type Side, type Terrain, type Size, type Town, type TownOptions, type Water, type Place } from './town';
 
-export const KEYS = ['map', 'seed', 'size', 'water', 'side', 'walls', 'land', 'terrain', 'name', 'mood', 'deck'] as const;
+export const KEYS = ['map', 'seed', 'size', 'water', 'side', 'walls', 'land', 'terrain', 'name', 'mood', 'deck', 'kind'] as const;
 export type Key = (typeof KEYS)[number];
 
-export const MAPS = ['town', 'ship'] as const;
+export const MAPS = ['town', 'ship', 'dungeon'] as const;
 export type MapKind = (typeof MAPS)[number];
 export const SHIP_SIZES: ShipSize[] = ['shuttle', 'corvette', 'freighter', 'station'];
 export const MOODS: Mood[] = ['intact', 'derelict'];
@@ -20,12 +21,27 @@ export interface ShipOptions {
 	deck: number; // counted from 1, as the deck list shows it
 }
 
+export interface DungeonOptions {
+	seed: string;
+	size: DungeonSize;
+	kind: DungeonKind;
+}
+
 const ALIAS: Record<string, string> = {
 	spaceship: 'ship',
 	starship: 'ship',
 	wreck: 'derelict',
 	wrecked: 'derelict',
 	abandoned: 'derelict',
+	tomb: 'crypt',
+	catacomb: 'crypt',
+	catacombs: 'crypt',
+	castle: 'keep',
+	fort: 'keep',
+	fortress: 'keep',
+	small: 'lair',
+	big: 'deep',
+	large: 'deep',
 	'large town': 'large-town',
 	largetown: 'large-town',
 	sea: 'coast',
@@ -58,12 +74,14 @@ export interface Parsed {
 	map: MapKind;
 	opts: TownOptions;
 	ship: ShipOptions;
+	dungeon: DungeonOptions;
 	problems: string[]; // lines that said something we could not use, in words for the reader
 }
 
 export function parseBlock(src: string): Parsed {
 	const opts: TownOptions = { ...DEFAULTS };
 	const ship: ShipOptions = { seed: DEFAULTS.seed, size: 'corvette', mood: 'intact', deck: 1 };
+	const dungeon: DungeonOptions = { seed: DEFAULTS.seed, size: 'dungeon', kind: 'crypt' };
 	const problems: string[] = [];
 	let map: MapKind = 'town';
 	let size = ''; // a town's sizes and a ship's differ, so it waits until the map is known
@@ -80,13 +98,17 @@ export function parseBlock(src: string): Parsed {
 			const v = clean(val);
 			if ((MAPS as readonly string[]).includes(v)) map = v as MapKind;
 			else problems.push(`map can be ${MAPS.join(' or ')}`);
-		} else if (key === 'seed') opts.seed = ship.seed = val || DEFAULTS.seed;
+		} else if (key === 'seed') opts.seed = ship.seed = dungeon.seed = val || DEFAULTS.seed;
 		else if (key === 'name') opts.name = val || undefined;
 		else if (key === 'size') size = clean(val);
 		else if (key === 'mood') {
 			const v = clean(val);
 			if ((MOODS as string[]).includes(v)) ship.mood = v as Mood;
 			else problems.push(`mood can be ${MOODS.join(' or ')}`);
+		} else if (key === 'kind') {
+			const v = clean(val);
+			if ((DUNGEON_KINDS as string[]).includes(v)) dungeon.kind = v as DungeonKind;
+			else problems.push(`kind can be ${DUNGEON_KINDS.join(' or ')}`);
 		} else if (key === 'deck') {
 			const n = Number(val);
 			if (Number.isInteger(n) && n >= 1) ship.deck = n;
@@ -118,11 +140,14 @@ export function parseBlock(src: string): Parsed {
 	if (size && map === 'ship') {
 		if ((SHIP_SIZES as string[]).includes(size)) ship.size = size as ShipSize;
 		else problems.push(`a ship's size can be ${SHIP_SIZES.join(', ')}`);
+	} else if (size && map === 'dungeon') {
+		if ((DUNGEON_SIZES as string[]).includes(size)) dungeon.size = size as DungeonSize;
+		else problems.push(`a dungeon's size can be ${DUNGEON_SIZES.join(', ')}`);
 	} else if (size) {
 		if ((SIZES as string[]).includes(size)) opts.size = size as Size;
 		else problems.push(`size can be ${SIZES.join(', ')}`);
 	}
-	return { map, opts, ship, problems };
+	return { map, opts, ship, dungeon, problems };
 }
 
 // The block's body with `key` set to `value`: the first line for that key is rewritten, or a line is added.
@@ -181,12 +206,12 @@ export function placeNote(t: Town, p: Place, mapNote: string): string {
 	].join('\n');
 }
 
-// A ship room's note: the deck it's on, what the card said, with its hazards and salvage in bold.
-export function roomNote(ship: string, deck: string | undefined, r: RoomInfo, mapNote: string): string {
+// A room's note, on a ship or in a dungeon: the deck it's on, what the card said, with its hazards and salvage in bold.
+export function roomNote(ship: string, deck: string | undefined, r: RoomInfo, mapNote: string, what: 'ship' | 'dungeon' = 'ship'): string {
 	const link = mapNote.replace(/\.md$/, '');
 	return [
 		'---',
-		`ship: "${ship}"`,
+		`${what}: "${ship}"`,
 		...(deck ? [`deck: "${deck}"`] : []),
 		`room: ${r.num}`,
 		'---',
@@ -197,7 +222,7 @@ export function roomNote(ship: string, deck: string | undefined, r: RoomInfo, ma
 		...r.notes
 			.split('\n')
 			.filter(Boolean)
-			.flatMap((l) => [l.replace(/^(Hazard|Salvage|Way in|Hook): /, '**$1:** '), '']),
+			.flatMap((l) => [l.replace(/^(Hazard|Salvage|Treasure|Way in|Hook): /, '**$1:** '), '']),
 		'## Notes',
 		'',
 		'',

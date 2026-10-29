@@ -1,6 +1,6 @@
 # Mapsmith
 
-Town and ship maps from a seed, drawn right in your notes.
+Town, ship and dungeon maps from a seed, drawn right in your notes.
 
 ![A Mapsmith town on a river mouth with hills behind it, the temple picked and its card below](docs/demo.png)
 
@@ -58,6 +58,28 @@ mood: derelict
 | `deck` | Which deck to draw, `1` or `2` |
 
 Above the map is the ship's story, folded away until you open it. Click a room's number for what's in it; **Open its note** writes the room to a folder named after the ship. The bar changes size, deck and mood, and **New ship** rolls a new seed. The command **Insert a ship map** adds a ship block.
+
+## Dungeons
+
+Add `map: dungeon` for a dungeon level: rooms joined by corridors, with plain doors, open arches, barred gates and the odd secret door (marked S), and fittings drawn in each room, from coffins and altars to racks and barrels.
+
+````
+```mapsmith
+map: dungeon
+seed: saltmarch
+size: dungeon
+kind: crypt
+```
+````
+
+![A crypt with nine rooms, the founder's tomb picked and its card below](docs/dungeon.png)
+
+| Key | What it does |
+| --- | --- |
+| `size` | `lair` (4 to 6 rooms), `dungeon` (8 to 10) or `deep` (13 to 16, with stairs going further down) |
+| `kind` | `crypt`, family vaults under the ground, or `keep`, a fallen stronghold |
+
+Each room has a line on what's there, and some have a hazard or treasure; the room at the far end always has treasure. Above the map is the dungeon's story with a hook. **Open its note** writes a room to a folder named after the dungeon, and **New dungeon** rolls a new seed. The command **Insert a dungeon map** adds a dungeon block.
 
 ## Privacy
 

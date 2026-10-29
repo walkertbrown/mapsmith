@@ -72,4 +72,15 @@ describe('roomNote', () => {
 		expect(text).toContain('**Salvage:** a spare coolant loop.');
 		expect(roomNote('MSV Mistral', undefined, r, 'M.md')).not.toContain('deck');
 	});
+	it('reads a dungeon block', () => {
+		const p = parseBlock('map: dungeon\nseed: Wren 7\nsize: Deep\nkind: castle');
+		expect(p.map).toBe('dungeon');
+		expect(p.dungeon).toEqual({ seed: 'Wren 7', size: 'deep', kind: 'keep' });
+		expect(p.problems).toEqual([]);
+		const bad = parseBlock('map: dungeon\nsize: city\nkind: swamp');
+		expect(bad.problems.join(' ')).toContain("a dungeon's size can be lair, dungeon, deep");
+		expect(bad.problems.join(' ')).toContain('kind can be crypt or keep');
+		expect(roomNote('The Vell Crypt', undefined, { num: 3, name: 'Ossuary', notes: 'Bones.\nTreasure: A cup.' }, 'Maps/Crypt.md', 'dungeon')).toContain('dungeon: "The Vell Crypt"');
+		expect(roomNote('The Vell Crypt', undefined, { num: 3, name: 'Ossuary', notes: 'Bones.\nTreasure: A cup.' }, 'Maps/Crypt.md', 'dungeon')).toContain('**Treasure:** A cup.');
+	});
 });

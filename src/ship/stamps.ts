@@ -22,6 +22,8 @@ export const STAMP_LABELS: Record<StampKind, string> = {
   stairs: 'Stairs', vent: 'Vent', pillar: 'Pillar', engine: 'Engine',
   bunk2: 'Bunk 1×2', reactor2: 'Reactor 2×2', container: 'Container 2×1', cryobank: 'Cryo bank 2×2', bench: 'Workbench 3×1',
   airlockroom: 'Airlock 2×2', shuttle: 'Shuttle 3×2', tank: 'Tank 1×2',
+  altar: 'Altar 2×1', statue: 'Statue', chest: 'Chest', sarcophagus: 'Sarcophagus 1×2', well: 'Well', brazier: 'Brazier', bookcase: 'Bookcase 2×1',
+  barrel: 'Barrel', rubble: 'Rubble', throne: 'Throne', bed: 'Bed 1×2', trapdoor: 'Trapdoor', rack: 'Weapon rack 2×1', bones: 'Bones',
 }
 export const STAMP_KINDS = Object.keys(STAMP_LABELS) as StampKind[]
 
@@ -161,6 +163,74 @@ export function drawStamp(s: Surface, kind: Stamp['kind'], c: StampColors) {
       break
     case 'pillar':
       s.circle(0.5, 0.5, 0.24, stroke, stroke, LW)
+      break
+    case 'altar':
+      s.rect(0.15, 0.2, W - 0.3, 0.6, fill, stroke, LW)
+      s.rect(0.3, 0.32, W - 0.6, 0.36, accent, stroke, LW * 0.7)
+      s.circle(0.55, 0.5, 0.07, stroke); s.circle(W - 0.55, 0.5, 0.07, stroke) // candles
+      break
+    case 'statue':
+      s.rect(0.14, 0.14, 0.72, 0.72, fill, stroke, LW)       // plinth
+      s.circle(0.5, 0.5, 0.2, accent, stroke, LW)            // the figure, from above
+      s.circle(0.5, 0.5, 0.08, stroke)
+      break
+    case 'chest':
+      s.rect(0.18, 0.28, 0.64, 0.44, fill, stroke, LW)
+      s.line(0.18, 0.42, 0.82, 0.42, stroke, LW * 0.7)       // lid
+      s.rect(0.44, 0.38, 0.12, 0.12, accent, stroke, LW * 0.6) // lock
+      break
+    case 'sarcophagus':
+      s.poly([[0.2, 0.08], [0.8, 0.08], [0.86, 0.6], [0.72, H - 0.08], [0.28, H - 0.08], [0.14, 0.6]], fill, stroke, LW)
+      s.circle(0.5, 0.36, 0.14, accent, stroke, LW * 0.7)    // carved head
+      s.line(0.5, 0.56, 0.5, H - 0.3, stroke, LW * 0.6)
+      break
+    case 'well':
+      s.circle(0.5, 0.5, 0.4, fill, stroke, LW)
+      s.circle(0.5, 0.5, 0.26, stroke, stroke, LW)
+      break
+    case 'brazier':
+      s.circle(0.5, 0.5, 0.26, fill, stroke, LW)
+      s.circle(0.5, 0.5, 0.13, accent, stroke, LW * 0.6)
+      for (let i = 0; i < 3; i++) { const a = (i / 3) * Math.PI * 2 + 0.5; s.line(0.5 + Math.cos(a) * 0.26, 0.5 + Math.sin(a) * 0.26, 0.5 + Math.cos(a) * 0.38, 0.5 + Math.sin(a) * 0.38, stroke, LW) }
+      break
+    case 'bookcase':
+      s.rect(0.06, 0.1, W - 0.12, 0.34, fill, stroke, LW)
+      for (let x = 0.22; x < W - 0.1; x += 0.16) s.line(x, 0.14, x, 0.4, stroke, LW * 0.5)
+      break
+    case 'barrel':
+      s.circle(0.5, 0.5, 0.32, fill, stroke, LW)
+      s.circle(0.5, 0.5, 0.18, undefined, stroke, LW * 0.6)
+      break
+    case 'rubble':
+      s.poly([[0.12, 0.6], [0.3, 0.3], [0.5, 0.42], [0.42, 0.75]], fill, stroke, LW)
+      s.poly([[0.5, 0.25], [0.75, 0.18], [0.85, 0.45], [0.6, 0.5]], fill, stroke, LW)
+      s.poly([[0.55, 0.65], [0.8, 0.6], [0.78, 0.85], [0.6, 0.86]], accent, stroke, LW * 0.7)
+      break
+    case 'throne':
+      s.rect(0.2, 0.1, 0.6, 0.24, accent, stroke, LW)        // high back
+      s.rect(0.26, 0.34, 0.48, 0.44, fill, stroke, LW)       // seat
+      s.rect(0.14, 0.3, 0.12, 0.5, accent, stroke, LW)
+      s.rect(0.74, 0.3, 0.12, 0.5, accent, stroke, LW)
+      break
+    case 'bed':
+      s.rect(0.15, 0.08, 0.7, H - 0.16, fill, stroke, LW)
+      s.rect(0.24, 0.16, 0.52, 0.3, accent, stroke, LW)
+      s.line(0.15, 0.7, 0.85, 0.7, stroke, LW * 0.7)         // turned-down blanket
+      break
+    case 'trapdoor':
+      s.rect(0.18, 0.18, 0.64, 0.64, fill, stroke, LW)
+      s.line(0.18, 0.5, 0.82, 0.5, stroke, LW * 0.6)
+      s.circle(0.5, 0.66, 0.06, stroke)
+      break
+    case 'rack':
+      s.rect(0.08, 0.12, W - 0.16, 0.2, fill, stroke, LW)
+      for (let x = 0.3; x < W - 0.1; x += 0.35) s.line(x, 0.32, x - 0.08, 0.7, stroke, LW * 0.8) // spears leant on it
+      break
+    case 'bones':
+      s.circle(0.36, 0.38, 0.12, fill, stroke, LW * 0.7)    // skull
+      s.line(0.3, 0.6, 0.78, 0.74, stroke, LW)
+      s.line(0.52, 0.52, 0.7, 0.86, stroke, LW)
+      s.circle(0.3, 0.6, 0.04, stroke); s.circle(0.78, 0.74, 0.04, stroke)
       break
     case 'engine':
       s.rect(0.1, 0.1, 0.8, 0.8, fill, stroke, LW)
