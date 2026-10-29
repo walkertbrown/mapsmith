@@ -40,13 +40,27 @@ describe('dungeons', () => {
 				expect(a !== b).toBe(true);
 				expect(a >= FIRST_ROOM || b >= FIRST_ROOM).toBe(true);
 				if (a === VOID || b === VOID) expect(k.kind).toBe('bars'); // only the keep's gate opens on the outside
-				else expect(a === CORRIDOR || b === CORRIDOR).toBe(true);
+				else expect(a === CORRIDOR || b === CORRIDOR || !(a in d.key) || !(b in d.key)).toBe(true); // or the keep's yard and towers
 				steps.add(`${k.x},${k.y}`).add(k.side === 'N' ? `${k.x},${k.y - 1}` : `${k.x - 1},${k.y}`);
 			}
 			for (const s of d.stamps) for (const [x, y] of stampCells(s)) expect(steps.has(`${x},${y}`)).toBe(false);
 			expect(keyEntries(d).some((e) => e.notes.includes('Treasure: '))).toBe(true);
 			expect(g.brief).toMatch(/\n\nHook: /);
 		}
+	});
+
+	it('walls a keep in a yard with a tower on each corner and the gate in the curtain wall', () => {
+		for (let i = 0; i < 12; i++) {
+			const d = generateDungeon(DUNGEON_SIZES[i % 3] ?? 'lair', 'keep', `k${i}`).decks[0]!;
+			const unkeyed = new Set([...d.cells].filter((c) => c >= FIRST_ROOM && !(c in d.key)));
+			expect(unkeyed.size).toBe(5);
+			expect(d.doors.filter((k) => k.kind === 'arch' && [...unkeyed].includes(cellAt(d, k.x, k.y))).length).toBeGreaterThanOrEqual(2);
+			const out = d.doors.filter((k) => cellAt(d, k.x, k.y) === VOID || (k.side === 'N' ? cellAt(d, k.x, k.y - 1) : cellAt(d, k.x - 1, k.y)) === VOID);
+			expect(out.map((k) => k.kind)).toEqual(['bars', 'bars']); // a double gate
+			expect(cutOffRooms(d).size).toBe(0);
+		}
+		const crypt = generateDungeon('dungeon', 'crypt', 'k0').decks[0]!;
+		expect([...crypt.cells].every((c) => c < FIRST_ROOM || c in crypt.key)).toBe(true);
 	});
 
 	it('gives a secret door to some dungeons and not others', () => {

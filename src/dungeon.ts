@@ -5,7 +5,7 @@
 import { person } from './names';
 import { chance, int, makeRng, pick, shuffle, type Rng } from './rng';
 import type { GenResult } from './ship/generate';
-import { CORRIDOR, FIRST_ROOM, VOID, canonicalEdge, cellAt, idx, newDeck, stampSize, stampCells, type Deck, type DoorKind, type Side, type StampKind } from './ship/model';
+import { CORRIDOR, FIRST_ROOM, GRID_H, GRID_W, VOID, canonicalEdge, cellAt, idx, newDeck, stampSize, stampCells, type Deck, type DoorKind, type Side, type StampKind } from './ship/model';
 
 export type DungeonSize = 'lair' | 'dungeon' | 'deep';
 export type DungeonKind = 'crypt' | 'keep';
@@ -13,6 +13,7 @@ export const DUNGEON_SIZES: DungeonSize[] = ['lair', 'dungeon', 'deep'];
 export const DUNGEON_KINDS: DungeonKind[] = ['crypt', 'keep'];
 
 const SW = 12, SH = 10, O = 8; // slot size in cells, and where the first slot starts
+const YARD = 8; // the keep's yard, a palette's ninth tint
 const PLAN: Record<DungeonSize, { rooms: [number, number]; cols: number; rows: number }> = {
 	lair: { rooms: [4, 6], cols: 3, rows: 3 },
 	dungeon: { rooms: [8, 10], cols: 4, rows: 4 },
@@ -406,8 +407,7 @@ export function generateDungeon(size: DungeonSize, kind: DungeonKind, seed: stri
 			addDoor(x1, y1, side, c1 === p.id || c2 === p.id ? kp : kq);
 		}
 	}
-	const gate = rooms[0] as Room;
-	if (kind === 'keep') addDoor(gate.x + (gate.w >> 1), gate.y + gate.h - 1, 'S', 'bars');
+	if (kind === 'keep') bailey(d, rooms, FIRST_ROOM + n);
 
 	// fittings, kept off every doorstep
 	const taken = new Set<number>(), near = new Set<number>();
@@ -443,6 +443,67 @@ export function generateDungeon(size: DungeonSize, kind: DungeonKind, seed: stri
 
 	const name = dungeonName(r, kind);
 	return { name, decks: [d], brief: story(r, kind, name) };
+}
+
+// A keep stands in a walled yard, its buildings opening onto it.
+function bailey(d: Deck, rooms: Room[], first: number) {
+	// no corridors in the open: close up the yard to two squares between buildings
+	for (let i = 0; i < d.cells.length; i++) if (d.cells[i] === CORRIDOR) d.cells[i] = VOID;
+	const used = (n: number, at: (i: number, j: number) => number) => {
+		const keep: number[] = [];
+		for (let i = 0; i < n; i++) {
+			let any = false;
+			for (let j = 0; j < n && !any; j++) any = at(i, j) >= FIRST_ROOM;
+			keep.push(any ? 1 : 0);
+		}
+		// new position of every old line; an empty run keeps at most two lines
+		const to: number[] = [];
+		let pos = O, run = 0; // far enough in for the wall and towers
+		for (let i = 0; i < n; i++) {
+			run = keep[i] ? 0 : run + 1;
+			to.push(pos);
+			if (keep[i] || run <= 2) pos++;
+		}
+		return to;
+	};
+	const nx = used(GRID_W, (x, y) => cellAt(d, x, y)), ny = used(GRID_H, (y, x) => cellAt(d, x, y));
+	const old = d.cells.slice();
+	d.cells.fill(VOID);
+	for (let i = 0; i < old.length; i++) if (old[i] !== VOID) d.cells[idx(nx[i % GRID_W] as number, ny[Math.floor(i / GRID_W)] as number)] = old[i] as number;
+	// a door edge moves with the room on either side of it
+	d.doors = d.doors.map((k) => {
+		const [ax, ay] = k.side === 'N' ? [k.x, k.y - 1] : [k.x - 1, k.y];
+		const inA = (old[idx(k.x, k.y)] as number) >= FIRST_ROOM;
+		return inA ? { ...k, x: nx[k.x] as number, y: ny[k.y] as number } : { ...k, x: (nx[ax] as number) + (k.side === 'W' ? 1 : 0), y: (ny[ay] as number) + (k.side === 'N' ? 1 : 0) };
+	});
+	for (const rm of rooms) { rm.x = nx[rm.x] as number; rm.y = ny[rm.y] as number; }
+
+	// the curtain wall three squares out from every building (room to walk past a corner tower),
+	// a tower on each corner, and the gate in the south wall below the way in
+	let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+	for (let i = 0; i < d.cells.length; i++) {
+		if (d.cells[i] === VOID) continue;
+		const x = i % GRID_W, y = Math.floor(i / GRID_W);
+		x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+	}
+	x0 -= 3; y0 -= 3; x1 += 3; y1 += 3;
+	const yard = first;
+	for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (cellAt(d, x, y) === VOID) d.cells[idx(x, y)] = yard;
+	d.tints[yard] = YARD;
+	const door = (x: number, y: number, side: Side, kind: DoorKind) => d.doors.push({ ...canonicalEdge(x, y, side), kind });
+	const corners: [number, number, number, number][] = [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]];
+	corners.forEach(([cx, cy, dx, dy], i) => {
+		const tower = first + 1 + i;
+		for (let y = cy - 1; y <= cy + 1; y++) for (let x = cx - 1; x <= cx + 1; x++) d.cells[idx(x, y)] = tower;
+		d.tints[tower] = 3;
+		// an arch from the tower's inner corner into the yard
+		door(cx + dx, cy + dy, dx > 0 ? 'E' : 'W', 'arch');
+	});
+	const gate = rooms[0] as Room, gx = gate.x + (gate.w >> 1);
+	if (!d.doors.some((k) => k.side === 'N' && k.x === gx && k.y === gate.y + gate.h)) door(gx, gate.y + gate.h - 1, 'S', 'door');
+	door(gx, y1, 'S', 'bars');
+	door(gx + 1, y1, 'S', 'bars');
+	d.nextRoom = first + 5;
 }
 
 function fitter(d: Deck, rm: Room, r: Rng, taken: Set<number>, near: Set<number>, head: Side): Fit {

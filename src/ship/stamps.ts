@@ -227,10 +227,12 @@ export function drawStamp(s: Surface, kind: Stamp['kind'], c: StampColors) {
       for (let x = 0.3; x < W - 0.1; x += 0.35) s.line(x, 0.32, x - 0.08, 0.7, stroke, LW * 0.8) // spears leant on it
       break
     case 'bones':
-      s.circle(0.36, 0.38, 0.12, fill, stroke, LW * 0.7)    // skull
-      s.line(0.3, 0.6, 0.78, 0.74, stroke, LW)
-      s.line(0.52, 0.52, 0.7, 0.86, stroke, LW)
-      s.circle(0.3, 0.6, 0.04, stroke); s.circle(0.78, 0.74, 0.04, stroke)
+      // crossed bones, a knob at each end, under a skull
+      s.line(0.24, 0.5, 0.76, 0.88, stroke, LW)
+      s.line(0.76, 0.5, 0.24, 0.88, stroke, LW)
+      for (const [x, y] of [[0.24, 0.5], [0.76, 0.5], [0.24, 0.88], [0.76, 0.88]] as const) s.circle(x, y, 0.05, stroke)
+      s.circle(0.5, 0.34, 0.17, fill, stroke, LW * 0.8)
+      s.circle(0.44, 0.33, 0.035, stroke); s.circle(0.56, 0.33, 0.035, stroke)
       break
     case 'engine':
       s.rect(0.1, 0.1, 0.8, 0.8, fill, stroke, LW)

@@ -51,7 +51,7 @@ export const DUNGEON_LIGHT: ShipPalette = {
 	bg: '#ddd4c1', floor: '#f8f3e8', corridor: '#f2ebdb', grid: 'rgba(50,40,30,0.12)',
 	wall: '#3a322a', hull: '#221d18', door: '#6b4a2b', airlock: '#6b4a2b', hatch: '#6b4a2b', window: '#8fa7b8',
 	text: '#2b2118', stamp: '#3a3028', stampFill: '#f8f3e8', stampAccent: '#cbbfa6', badge: '#fffaf0', badgeInk: '#7a2e1f',
-	tints: ['#f8f3e8', '#f1e9d7', '#eee7de', '#f4e7d9', '#e9eddd', '#f5efd5', '#ece6e1', '#f0e3d7'],
+	tints: ['#f8f3e8', '#f1e9d7', '#eee7de', '#f4e7d9', '#e9eddd', '#f5efd5', '#ece6e1', '#f0e3d7', '#dfe0c6'],
 	hullWidth: 0.24, wallWidth: 0.1, rock: 'rgba(40,30,20,0.4)',
 };
 
@@ -59,7 +59,7 @@ export const DUNGEON_DARK: ShipPalette = {
 	bg: '#121418', floor: '#2c3038', corridor: '#262a31', grid: 'rgba(210,200,180,0.10)',
 	wall: '#b9b2a2', hull: '#ddd6c4', door: '#d9a441', airlock: '#d9a441', hatch: '#d9a441', window: '#9be7ff',
 	text: '#ece6d8', stamp: '#cfc6b2', stampFill: '#2c3038', stampAccent: '#5c5648', badge: '#d9a441', badgeInk: '#1a1400',
-	tints: ['#2c3038', '#31343b', '#2e3540', '#39312f', '#2c3732', '#37352b', '#32313b', '#353030'],
+	tints: ['#2c3038', '#31343b', '#2e3540', '#39312f', '#2c3732', '#37352b', '#32313b', '#353030', '#232a22'],
 	hullWidth: 0.22, wallWidth: 0.09, rock: 'rgba(220,210,190,0.2)',
 };
 
@@ -226,7 +226,7 @@ function door(k: Door, P: ShipPalette, X: (x: number) => number, Y: (y: number) 
 	const color = k.kind === 'airlock' ? P.airlock : k.kind === 'hatch' ? P.hatch : k.kind === 'window' ? P.window : P.door;
 	const at = { transform: `translate(${f(cx)} ${f(cy)})${horiz ? '' : ' rotate(90)'}` };
 	const sw = f(Math.max(1, S * 0.06));
-	if (k.kind === 'arch') return g(at, [-1, 1].map((e) => el('circle', { cx: f((e * len) / 2), cy: 0, r: f(S * 0.1), fill: P.wall })));
+	if (k.kind === 'arch') return g(at, [-1, 1].map((e) => el('rect', { x: f((e * len) / 2 - S * 0.13), y: f(-S * 0.13), width: f(S * 0.26), height: f(S * 0.26), fill: P.hull })));
 	if (k.kind === 'bars')
 		return g(at, [
 			el('path', { d: `M${f(-len / 2)} 0H${f(len / 2)}`, stroke: P.door, 'stroke-width': sw }),
