@@ -62,6 +62,8 @@ describe('generateTown', () => {
 		const t = generateTown({ seed: 'click', size: 'city', water: 'river' });
 		const svg = toString(renderTown(t, { palette: DARK }));
 		for (let i = 0; i < t.places.length; i++) expect(svg).toContain(`data-place="${i}"`);
+		// the ring round a picked place stays hidden until the stylesheet shows it
+		expect(svg.match(/class="mapsmith-ring"[^>]*visibility="hidden"/g)).toHaveLength(t.places.length);
 		expect(svg).not.toMatch(/NaN|undefined/);
 	});
 

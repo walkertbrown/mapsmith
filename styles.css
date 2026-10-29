@@ -36,9 +36,17 @@
 
 .mapsmith-map .mapsmith-place.is-picked {
 	fill: var(--interactive-accent);
+	stroke: var(--text-normal);
+	stroke-width: 2.5px;
 }
 
-.mapsmith-map .mapsmith-badge.is-picked circle {
+.mapsmith-map .mapsmith-badge.is-picked .mapsmith-ring {
+	visibility: visible;
+	fill: none;
+	stroke: var(--interactive-accent);
+}
+
+.mapsmith-map .mapsmith-badge.is-picked circle:not(.mapsmith-ring) {
 	fill: var(--interactive-accent);
 	stroke: var(--text-on-accent);
 }

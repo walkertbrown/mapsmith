@@ -324,6 +324,8 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 				{ 'font-family': 'Georgia, serif', 'font-size': 11, 'font-weight': 'bold', 'text-anchor': 'middle' },
 				t.places.map((p) =>
 					g({ class: 'mapsmith-badge', 'data-place': p.n - 1 }, [
+						// a ring round the picked place, shown by the stylesheet
+						el('circle', { class: 'mapsmith-ring', cx: f(p.at.x), cy: f(p.at.y), r: rad * 2.2, fill: 'none', stroke: P.badgeInk, 'stroke-width': 3, visibility: 'hidden', 'pointer-events': 'none' }),
 						el('circle', { cx: f(p.at.x), cy: f(p.at.y), r: rad, fill: P.badge, stroke: P.badgeInk, 'stroke-width': 1.5 }),
 						el('text', { x: f(p.at.x), y: f(p.at.y + 4), fill: P.badgeInk }, [String(p.n)]),
 					]),

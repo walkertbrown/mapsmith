@@ -3,7 +3,7 @@
 	"name": "Mapsmith",
 	"version": "0.1.0",
 	"minAppVersion": "1.13.0",
-	"description": "Town maps from a seed, drawn in your notes: walls, rivers, docks and fields, with numbered places you can click for a name, a keeper and a hook, and a note for each.",
+	"description": "Town maps from a seed, drawn in your notes: walls, rivers, hills, docks and named streets, with numbered places you can click for a name, a keeper and a hook, and a note for each.",
 	"author": "Bananafest Destiny",
 	"isDesktopOnly": false
 }
