@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editBlock, newSeed, noteName, parseBlock, placeNote, setKey } from '../src/block';
+import { editBlock, newSeed, noteName, parseBlock, placeNote, roomNote, setKey } from '../src/block';
 import { DEFAULTS, generateTown } from '../src/town';
 
 describe('parseBlock', () => {
@@ -59,5 +59,17 @@ describe('ship blocks', () => {
 		expect(parseBlock('map: ship\nsize: town').problems).toEqual(['a ship\'s size can be shuttle, corvette, freighter, station']);
 		expect(parseBlock('size: corvette').problems).toEqual(['size can be hamlet, village, town, large-town, city']);
 		expect(parseBlock('map: ship\ndeck: 0').problems).toEqual(['deck is a number, 1 for the first']);
+	});
+});
+
+describe('roomNote', () => {
+	it('writes the room up with its hazards in bold and a link to the map', () => {
+		const r = { num: 4, name: 'Engineering', notes: 'Vacuum. Suit up.\nHazard: the floor is live.\nSalvage: a spare coolant loop.' };
+		const text = roomNote('ISV Larkspur', 'Upper deck', r, 'Ships/Larkspur.md');
+		expect(text).toContain('# Engineering');
+		expect(text).toContain('*Room 4 on the upper deck of ISV Larkspur, on the [[Ships/Larkspur|map]].*');
+		expect(text).toContain('**Hazard:** the floor is live.');
+		expect(text).toContain('**Salvage:** a spare coolant loop.');
+		expect(roomNote('MSV Mistral', undefined, r, 'M.md')).not.toContain('deck');
 	});
 });

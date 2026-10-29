@@ -2,6 +2,7 @@
 // changes one of them. Kept apart from main.ts so it can be tested without Obsidian.
 
 import type { Mood, ShipSize } from './ship/generate';
+import type { RoomInfo } from './ship/model';
 import { DEFAULTS, LANDS, SIDES, SIZES, TERRAINS, WATERS, type Land, type Side, type Terrain, type Size, type Town, type TownOptions, type Water, type Place } from './town';
 
 export const KEYS = ['map', 'seed', 'size', 'water', 'side', 'walls', 'land', 'terrain', 'name', 'mood', 'deck'] as const;
@@ -180,4 +181,27 @@ export function placeNote(t: Town, p: Place, mapNote: string): string {
 	].join('\n');
 }
 
-export const noteName = (p: Place) => p.name.replace(/[\\/:*?"<>|#^[\]]/g, '').trim() || `Place ${p.n}`;
+// A ship room's note: the deck it's on, what the card said, with its hazards and salvage in bold.
+export function roomNote(ship: string, deck: string | undefined, r: RoomInfo, mapNote: string): string {
+	const link = mapNote.replace(/\.md$/, '');
+	return [
+		'---',
+		`ship: "${ship}"`,
+		...(deck ? [`deck: "${deck}"`] : []),
+		`room: ${r.num}`,
+		'---',
+		`# ${r.name}`,
+		'',
+		`*Room ${r.num}${deck ? ` on the ${deck.toLowerCase()}` : ''} of ${ship}, on the [[${link}|map]].*`,
+		'',
+		...r.notes
+			.split('\n')
+			.filter(Boolean)
+			.flatMap((l) => [l.replace(/^(Hazard|Salvage|Way in|Hook): /, '**$1:** '), '']),
+		'## Notes',
+		'',
+		'',
+	].join('\n');
+}
+
+export const noteName = (p: Pick<Place, 'name' | 'n'>) => p.name.replace(/[\\/:*?"<>|#^[\]]/g, '').trim() || `Place ${p.n}`;

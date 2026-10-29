@@ -1,5 +1,5 @@
 import { Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, Plugin, TFile, normalizePath } from 'obsidian';
-import { SHIP_SIZES, editBlock, newSeed, noteName, parseBlock, placeNote, setKey, type Key, type ShipOptions } from './block';
+import { SHIP_SIZES, editBlock, newSeed, noteName, parseBlock, placeNote, roomNote, setKey, type Key, type ShipOptions } from './block';
 import { DARK, LIGHT, renderTown, toDom } from './render';
 import { hashSeed } from './rng';
 import { generate } from './ship/generate';
@@ -44,17 +44,17 @@ export default class MapsmithPlugin extends Plugin {
 		return ok;
 	}
 
-	/** Opens the place's note, writing it first if it isn't there yet. It sits in a folder named after the town,
-	 *  beside the note with the map. */
-	async openPlace(t: Town, p: Place, sourcePath: string) {
+	/** Opens a place's note, writing it first if it isn't there yet. It sits in a folder named after the town
+	 *  or ship, beside the note with the map. */
+	async openNote(folder: string, name: string, text: () => string, sourcePath: string) {
 		const { vault, workspace } = this.app;
 		const at = sourcePath.lastIndexOf('/');
-		const dir = normalizePath(`${at < 0 ? '' : sourcePath.slice(0, at + 1)}${t.name}`);
-		const path = normalizePath(`${dir}/${noteName(p)}.md`);
+		const dir = normalizePath(`${at < 0 ? '' : sourcePath.slice(0, at + 1)}${folder}`);
+		const path = normalizePath(`${dir}/${name}.md`);
 		let file = vault.getAbstractFileByPath(path);
 		if (!(file instanceof TFile)) {
 			if (!vault.getAbstractFileByPath(dir)) await vault.createFolder(dir);
-			file = await vault.create(path, placeNote(t, p, sourcePath));
+			file = await vault.create(path, text());
 		}
 		if (file instanceof TFile) await workspace.getLeaf(true).openFile(file);
 	}
@@ -196,10 +196,12 @@ class TownMap extends MarkdownRenderChild {
 			li.createSpan({ cls: 'mapsmith-key-name', text: r.name });
 			return li;
 		});
-		this.pickable(svg, items, (i) => this.drawRoom(card, i < 0 ? undefined : rooms[i]));
+		const ship = s.name.replace(/^Derelict — /, '');
+		const deckName = s.decks.length > 1 ? deck.name : undefined;
+		this.pickable(svg, items, (i) => this.drawRoom(card, i < 0 ? undefined : rooms[i], ship, deckName));
 	}
 
-	drawRoom(card: HTMLElement, r: RoomInfo | undefined) {
+	drawRoom(card: HTMLElement, r: RoomInfo | undefined, ship: string, deck: string | undefined) {
 		card.empty();
 		if (!r) {
 			card.createDiv({ cls: 'mapsmith-hint', text: 'Click a number to see what is in that room.' });
@@ -217,6 +219,9 @@ class TownMap extends MarkdownRenderChild {
 				div.appendText(m[2] as string);
 			} else div.setText(line);
 		}
+		const open = card.createEl('button', { text: 'Open its note' });
+		const folder = deck ? `${ship}/${deck}` : ship;
+		open.addEventListener('click', () => void this.plugin.openNote(folder, noteName({ name: `${r.num} ${r.name}`, n: r.num }), () => roomNote(ship, deck, r, this.ctx.sourcePath), this.ctx.sourcePath));
 	}
 
 	drawCard(card: HTMLElement, t: Town, p: Place | undefined) {
@@ -234,6 +239,6 @@ class TownMap extends MarkdownRenderChild {
 		hook.createSpan({ cls: 'mapsmith-card-tag', text: 'Hook' });
 		hook.appendText(p.hook);
 		const open = card.createEl('button', { text: 'Open its note' });
-		open.addEventListener('click', () => void this.plugin.openPlace(t, p, this.ctx.sourcePath));
+		open.addEventListener('click', () => void this.plugin.openNote(t.name, noteName(p), () => placeNote(t, p, this.ctx.sourcePath), this.ctx.sourcePath));
 	}
 }
