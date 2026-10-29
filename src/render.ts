@@ -139,10 +139,10 @@ export const DARK: Palette = {
 	},
 };
 
-const f = (n: number) => Math.round(n * 10) / 10;
+export const f = (n: number) => Math.round(n * 10) / 10;
 const d = (p: Pt[], close = true) => (p.length ? `M${p.map((q) => `${f(q.x)} ${f(q.y)}`).join('L')}${close ? 'Z' : ''}` : '');
-const el = (tag: string, a: Record<string, string | number>, kids?: (Node | string)[]): Node => ({ tag, a, kids });
-const g = (a: Record<string, string | number>, kids: (Node | string)[]) => el('g', a, kids);
+export const el = (tag: string, a: Record<string, string | number>, kids?: (Node | string)[]): Node => ({ tag, a, kids });
+export const g = (a: Record<string, string | number>, kids: (Node | string)[]) => el('g', a, kids);
 
 export interface RenderOptions {
 	palette?: Palette;
