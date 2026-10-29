@@ -1,0 +1,121 @@
+/* Mapsmith: the map, the bar above it, and the card and key below. The map's own colours are drawn into the SVG. */
+
+.mapsmith {
+	margin: 0.5em 0;
+}
+
+.mapsmith-bar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+	margin-bottom: 6px;
+}
+
+.mapsmith-bar .mapsmith-toggle.is-on {
+	color: var(--text-accent);
+}
+
+.mapsmith-problem {
+	color: var(--text-error);
+	font-size: var(--font-ui-small);
+	margin-bottom: 6px;
+}
+
+.mapsmith-map svg {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: var(--radius-s);
+}
+
+.mapsmith-map .mapsmith-place,
+.mapsmith-map .mapsmith-badge {
+	cursor: pointer;
+}
+
+.mapsmith-map .mapsmith-place.is-picked {
+	fill: var(--interactive-accent);
+}
+
+.mapsmith-map .mapsmith-badge.is-picked circle {
+	fill: var(--interactive-accent);
+	stroke: var(--text-on-accent);
+}
+
+.mapsmith-map .mapsmith-badge.is-picked text {
+	fill: var(--text-on-accent);
+}
+
+.mapsmith-card {
+	margin-top: 8px;
+	padding: 8px 12px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.mapsmith-card button {
+	align-self: flex-start;
+	margin-top: 4px;
+}
+
+.mapsmith-hint {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.mapsmith-card-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: var(--font-semibold);
+	font-size: 1.1em;
+}
+
+.mapsmith-card-n {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 1.6em;
+	height: 1.6em;
+	border-radius: 50%;
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	font-size: 0.85em;
+}
+
+.mapsmith-card-sub {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.mapsmith-card-tag {
+	font-weight: var(--font-semibold);
+	margin-right: 6px;
+}
+
+.mapsmith-key {
+	margin: 8px 0 0;
+	padding-left: 1.8em;
+	columns: 2 14em;
+	font-size: var(--font-ui-small);
+}
+
+.mapsmith-key li {
+	cursor: pointer;
+	break-inside: avoid;
+}
+
+.mapsmith-key li:hover,
+.mapsmith-key li.is-picked {
+	color: var(--text-accent);
+}
+
+.mapsmith-key-label {
+	color: var(--text-muted);
+	margin-left: 6px;
+}
