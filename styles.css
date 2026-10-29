@@ -96,6 +96,25 @@
 	font-size: 0.85em;
 }
 
+.mapsmith-title {
+	font-weight: var(--font-semibold);
+	margin-bottom: 4px;
+}
+
+.mapsmith-story {
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+	margin-bottom: 8px;
+}
+
+.mapsmith-story summary {
+	cursor: pointer;
+}
+
+.mapsmith-story p {
+	margin: 6px 0 0;
+}
+
 .mapsmith-card-sub {
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);

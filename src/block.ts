@@ -1,12 +1,30 @@
 // The `mapsmith` code block: `key: value` lines in, town options out, and back again when a button
 // changes one of them. Kept apart from main.ts so it can be tested without Obsidian.
 
+import type { Mood, ShipSize } from './ship/generate';
 import { DEFAULTS, LANDS, SIDES, SIZES, TERRAINS, WATERS, type Land, type Side, type Terrain, type Size, type Town, type TownOptions, type Water, type Place } from './town';
 
-export const KEYS = ['seed', 'size', 'water', 'side', 'walls', 'land', 'terrain', 'name'] as const;
+export const KEYS = ['map', 'seed', 'size', 'water', 'side', 'walls', 'land', 'terrain', 'name', 'mood', 'deck'] as const;
 export type Key = (typeof KEYS)[number];
 
+export const MAPS = ['town', 'ship'] as const;
+export type MapKind = (typeof MAPS)[number];
+export const SHIP_SIZES: ShipSize[] = ['shuttle', 'corvette', 'freighter', 'station'];
+export const MOODS: Mood[] = ['intact', 'derelict'];
+
+export interface ShipOptions {
+	seed: string;
+	size: ShipSize;
+	mood: Mood;
+	deck: number; // counted from 1, as the deck list shows it
+}
+
 const ALIAS: Record<string, string> = {
+	spaceship: 'ship',
+	starship: 'ship',
+	wreck: 'derelict',
+	wrecked: 'derelict',
+	abandoned: 'derelict',
 	'large town': 'large-town',
 	largetown: 'large-town',
 	sea: 'coast',
@@ -36,13 +54,18 @@ const clean = (v: string) => {
 };
 
 export interface Parsed {
+	map: MapKind;
 	opts: TownOptions;
+	ship: ShipOptions;
 	problems: string[]; // lines that said something we could not use, in words for the reader
 }
 
 export function parseBlock(src: string): Parsed {
 	const opts: TownOptions = { ...DEFAULTS };
+	const ship: ShipOptions = { seed: DEFAULTS.seed, size: 'corvette', mood: 'intact', deck: 1 };
 	const problems: string[] = [];
+	let map: MapKind = 'town';
+	let size = ''; // a town's sizes and a ship's differ, so it waits until the map is known
 	for (const raw of src.split('\n')) {
 		const line = raw.trim();
 		if (!line || line.startsWith('#') || line.startsWith('//')) continue;
@@ -52,12 +75,21 @@ export function parseBlock(src: string): Parsed {
 			continue;
 		}
 		const key = (m[1] as string).toLowerCase(), val = (m[2] as string).trim();
-		if (key === 'seed') opts.seed = val || DEFAULTS.seed;
-		else if (key === 'name') opts.name = val || undefined;
-		else if (key === 'size') {
+		if (key === 'map') {
 			const v = clean(val);
-			if ((SIZES as string[]).includes(v)) opts.size = v as Size;
-			else problems.push(`size can be ${SIZES.join(', ')}`);
+			if ((MAPS as readonly string[]).includes(v)) map = v as MapKind;
+			else problems.push(`map can be ${MAPS.join(' or ')}`);
+		} else if (key === 'seed') opts.seed = ship.seed = val || DEFAULTS.seed;
+		else if (key === 'name') opts.name = val || undefined;
+		else if (key === 'size') size = clean(val);
+		else if (key === 'mood') {
+			const v = clean(val);
+			if ((MOODS as string[]).includes(v)) ship.mood = v as Mood;
+			else problems.push(`mood can be ${MOODS.join(' or ')}`);
+		} else if (key === 'deck') {
+			const n = Number(val);
+			if (Number.isInteger(n) && n >= 1) ship.deck = n;
+			else problems.push('deck is a number, 1 for the first');
 		} else if (key === 'water') {
 			const v = clean(val);
 			if ((WATERS as string[]).includes(v)) opts.water = v as Water;
@@ -82,7 +114,14 @@ export function parseBlock(src: string): Parsed {
 			else problems.push(`terrain can be ${TERRAINS.join(', ')}`);
 		} else problems.push(`no key "${key}"; try ${KEYS.join(', ')}`);
 	}
-	return { opts, problems };
+	if (size && map === 'ship') {
+		if ((SHIP_SIZES as string[]).includes(size)) ship.size = size as ShipSize;
+		else problems.push(`a ship's size can be ${SHIP_SIZES.join(', ')}`);
+	} else if (size) {
+		if ((SIZES as string[]).includes(size)) opts.size = size as Size;
+		else problems.push(`size can be ${SIZES.join(', ')}`);
+	}
+	return { map, opts, ship, problems };
 }
 
 // The block's body with `key` set to `value`: the first line for that key is rewritten, or a line is added.

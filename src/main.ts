@@ -1,11 +1,16 @@
 import { Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, Plugin, TFile, normalizePath } from 'obsidian';
-import { editBlock, newSeed, noteName, parseBlock, placeNote, setKey, type Key } from './block';
+import { SHIP_SIZES, editBlock, newSeed, noteName, parseBlock, placeNote, setKey, type Key, type ShipOptions } from './block';
 import { DARK, LIGHT, renderTown, toDom } from './render';
+import { hashSeed } from './rng';
+import { generate } from './ship/generate';
+import { keyEntries, type RoomInfo } from './ship/model';
+import { SHIP_DARK, SHIP_LIGHT, renderDeck } from './ship/svg';
 import { SIZES, TERRAINS, WATERS, generateTown, type Place, type Town } from './town';
 
 const SIZE_TEXT: Record<string, string> = { hamlet: 'Hamlet', village: 'Village', town: 'Town', 'large-town': 'Large town', city: 'City' };
 const WATER_TEXT: Record<string, string> = { none: 'No water', river: 'River', coast: 'Coast', estuary: 'River mouth', lake: 'Lake' };
 const TERRAIN_TEXT: Record<string, string> = { flat: 'Flat', hills: 'Hills', mountains: 'Mountains' };
+const SHIP_TEXT: Record<string, string> = { shuttle: 'Shuttle', corvette: 'Corvette', freighter: 'Freighter', station: 'Station' };
 
 export default class MapsmithPlugin extends Plugin {
 	onload() {
@@ -16,6 +21,11 @@ export default class MapsmithPlugin extends Plugin {
 			id: 'insert-town',
 			name: 'Insert a town map',
 			editorCallback: (editor: Editor) => editor.replaceSelection(`\`\`\`mapsmith\nseed: ${newSeed()}\nsize: town\nwater: river\n\`\`\`\n`),
+		});
+		this.addCommand({
+			id: 'insert-ship',
+			name: 'Insert a ship map',
+			editorCallback: (editor: Editor) => editor.replaceSelection(`\`\`\`mapsmith\nmap: ship\nseed: ${newSeed()}\nsize: corvette\nmood: derelict\n\`\`\`\n`),
 		});
 	}
 
@@ -79,7 +89,11 @@ class TownMap extends MarkdownRenderChild {
 		const root = this.containerEl;
 		root.empty();
 		root.addClass('mapsmith');
-		const { opts, problems } = parseBlock(this.src);
+		const { map, opts, ship, problems } = parseBlock(this.src);
+		if (map === 'ship') {
+			this.drawShip(root, ship, problems);
+			return;
+		}
 		const t = generateTown(opts);
 		this.town = t;
 
@@ -113,27 +127,96 @@ class TownMap extends MarkdownRenderChild {
 		const svg = toDom(renderTown(t, { palette: dark ? DARK : LIGHT }), frame);
 		const card = root.createDiv({ cls: 'mapsmith-card' });
 		const key = root.createEl('ol', { cls: 'mapsmith-key' });
-		const items = t.places.map((p, i) => {
+		const items = t.places.map((p) => {
 			const li = key.createEl('li');
 			li.createSpan({ cls: 'mapsmith-key-name', text: p.name });
 			li.createSpan({ cls: 'mapsmith-key-label', text: p.label });
-			li.addEventListener('click', () => pick(i));
 			return li;
 		});
+		this.pickable(svg, items, (i) => this.drawCard(card, t, i < 0 ? undefined : t.places[i]));
+	}
 
+	/** Clicking a number on the map or a line of the key picks that place; the pick lasts through a redraw. */
+	pickable(svg: SVGElement, items: HTMLElement[], show: (i: number) => void) {
 		const pick = (i: number) => {
 			this.picked = i;
 			svg.querySelectorAll('.is-picked').forEach((e) => e.removeClass('is-picked'));
 			svg.querySelectorAll(`[data-place="${i}"]`).forEach((e) => e.addClass('is-picked'));
 			items.forEach((li, k) => li.toggleClass('is-picked', k === i));
-			this.drawCard(card, t, t.places[i]);
+			show(i);
 		};
+		items.forEach((li, i) => li.addEventListener('click', () => pick(i)));
 		svg.addEventListener('click', (ev) => {
 			const hit = (ev.target as Element | null)?.closest('[data-place]');
 			if (hit) pick(Number(hit.getAttribute('data-place')));
 		});
-		if (this.picked >= 0 && this.picked < t.places.length) pick(this.picked);
-		else this.drawCard(card, t, undefined);
+		if (this.picked >= 0 && this.picked < items.length) pick(this.picked);
+		else show(-1);
+	}
+
+	drawShip(root: HTMLElement, o: ShipOptions, problems: string[]) {
+		const s = generate(o.size, o.mood, hashSeed(o.seed));
+		const at = Math.min(o.deck, s.decks.length) - 1;
+		const deck = s.decks[at];
+		if (!deck) return;
+
+		const bar = root.createDiv({ cls: 'mapsmith-bar' });
+		const size = bar.createEl('select', { cls: 'dropdown' });
+		for (const k of SHIP_SIZES) size.createEl('option', { text: SHIP_TEXT[k], value: k });
+		size.value = o.size;
+		size.addEventListener('change', () => this.set('size', size.value));
+		if (s.decks.length > 1) {
+			const decks = bar.createEl('select', { cls: 'dropdown' });
+			s.decks.forEach((d, i) => decks.createEl('option', { text: d.name, value: String(i + 1) }));
+			decks.value = String(at + 1);
+			decks.addEventListener('change', () => this.set('deck', decks.value));
+		}
+		const wreck = o.mood === 'derelict';
+		const mood = bar.createEl('button', { text: wreck ? 'Derelict' : 'Intact', cls: 'mapsmith-toggle' });
+		mood.toggleClass('is-on', wreck);
+		mood.addEventListener('click', () => this.set('mood', wreck ? 'intact' : 'derelict'));
+		const again = bar.createEl('button', { text: 'New ship', cls: 'mod-cta' });
+		again.addEventListener('click', () => this.set('seed', newSeed()));
+		if (problems.length) root.createDiv({ cls: 'mapsmith-problem', text: problems.join('. ') + '.' });
+
+		root.createDiv({ cls: 'mapsmith-title', text: s.decks.length > 1 ? `${s.name}, ${deck.name.toLowerCase()}` : s.name });
+		const story = root.createEl('details', { cls: 'mapsmith-story' });
+		story.createEl('summary', { text: wreck ? 'What happened here' : 'Who is aboard' });
+		for (const para of s.brief.split('\n\n')) story.createEl('p', { text: para });
+
+		const dark = document.body.hasClass('theme-dark');
+		const frame = root.createDiv({ cls: 'mapsmith-map' });
+		const id = `ms${hashSeed(`${o.seed}:${o.size}:${o.mood}:${at}`).toString(36)}`;
+		const svg = toDom(renderDeck(deck, { palette: dark ? SHIP_DARK : SHIP_LIGHT, id }), frame);
+		const card = root.createDiv({ cls: 'mapsmith-card' });
+		const key = root.createEl('ol', { cls: 'mapsmith-key' });
+		const rooms = keyEntries(deck);
+		const items = rooms.map((r) => {
+			const li = key.createEl('li');
+			li.createSpan({ cls: 'mapsmith-key-name', text: r.name });
+			return li;
+		});
+		this.pickable(svg, items, (i) => this.drawRoom(card, i < 0 ? undefined : rooms[i]));
+	}
+
+	drawRoom(card: HTMLElement, r: RoomInfo | undefined) {
+		card.empty();
+		if (!r) {
+			card.createDiv({ cls: 'mapsmith-hint', text: 'Click a number to see what is in that room.' });
+			return;
+		}
+		const head = card.createDiv({ cls: 'mapsmith-card-head' });
+		head.createSpan({ cls: 'mapsmith-card-n', text: String(r.num) });
+		head.createSpan({ cls: 'mapsmith-card-name', text: r.name });
+		for (const line of r.notes.split('\n').filter(Boolean)) {
+			// "Hazard: ..." and the like get the same tag as a town's hook
+			const m = /^(Hazard|Salvage|Way in|Hook): (.*)$/.exec(line);
+			const div = card.createDiv({ cls: m ? 'mapsmith-card-hook' : '' });
+			if (m) {
+				div.createSpan({ cls: 'mapsmith-card-tag', text: m[1] as string });
+				div.appendText(m[2] as string);
+			} else div.setText(line);
+		}
 	}
 
 	drawCard(card: HTMLElement, t: Town, p: Place | undefined) {

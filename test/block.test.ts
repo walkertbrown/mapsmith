@@ -12,7 +12,7 @@ describe('parseBlock', () => {
 		const { opts, problems } = parseBlock('size: huge\ncolour: red\njust words\n\n# a comment');
 		expect(opts).toEqual(DEFAULTS);
 		expect(problems).toHaveLength(3);
-		expect(problems[0]).toContain('hamlet');
+		expect(problems.join(' ')).toContain('hamlet');
 	});
 });
 
@@ -43,5 +43,21 @@ describe('notes', () => {
 		expect(text).toContain(p.hook);
 		expect(text).toContain('[[Towns/Map|map]]');
 		expect(noteName({ ...p, name: 'The "Red" Fox: Inn' })).toBe('The Red Fox Inn');
+	});
+});
+
+describe('ship blocks', () => {
+	it('reads a ship, with its own sizes', () => {
+		const { map, ship, problems } = parseBlock('map: starship\nseed: Wren 7\nsize: Freighter\nmood: wreck\ndeck: 2\n');
+		expect(problems).toEqual([]);
+		expect(map).toBe('ship');
+		expect(ship).toEqual({ seed: 'Wren 7', size: 'freighter', mood: 'derelict', deck: 2 });
+	});
+
+	it('says which sizes a ship can be, and leaves towns alone', () => {
+		expect(parseBlock('size: corvette\nmap: ship').ship.size).toBe('corvette');
+		expect(parseBlock('map: ship\nsize: town').problems).toEqual(['a ship\'s size can be shuttle, corvette, freighter, station']);
+		expect(parseBlock('size: corvette').problems).toEqual(['size can be hamlet, village, town, large-town, city']);
+		expect(parseBlock('map: ship\ndeck: 0').problems).toEqual(['deck is a number, 1 for the first']);
 	});
 });
