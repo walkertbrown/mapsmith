@@ -34,6 +34,7 @@ export interface Palette {
 	wall: string;
 	tree: string;
 	treeDark: string;
+	treeLight: string;
 	green: string;
 	label: string;
 	badge: string;
@@ -64,6 +65,7 @@ export const LIGHT: Palette = {
 	wall: '#5e5146',
 	tree: '#93a476',
 	treeDark: '#5f7148',
+	treeLight: '#b2c08f',
 	green: '#cfd3a6',
 	label: '#3f3229',
 	badge: '#fbf6e9',
@@ -94,6 +96,7 @@ export const DARK: Palette = {
 	wall: '#b8a891',
 	tree: '#4c5a3c',
 	treeDark: '#2d3824',
+	treeLight: '#617050',
 	green: '#384230',
 	label: '#e8dfc8',
 	badge: '#2b2620',
@@ -167,8 +170,10 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 
 	// trees: a dark shadow then the crown
 	const trees = t.trees;
-	kids.push(g({ fill: P.treeDark }, trees.map((c) => el('circle', { cx: f(c.x + c.r * 0.25), cy: f(c.y + c.r * 0.3), r: f(c.r) }))));
-	kids.push(g({ fill: P.tree, stroke: P.treeDark, 'stroke-width': 0.6 }, trees.map((c) => el('circle', { cx: f(c.x), cy: f(c.y), r: f(c.r * 0.92) }))));
+	// a dark rim that runs together into the outline of a wood, the crowns, and a glint of light on each
+	kids.push(dots(trees, P.treeDark, 1.18, 0.18, 0.24));
+	kids.push(dots(trees, P.tree, 0.92, 0, 0));
+	kids.push(dots(trees, P.treeLight, 0.4, -0.3, -0.32));
 
 	// buildings
 	// each ward has its own share of slate roofs among the tiles
@@ -276,6 +281,20 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 function rectAt(c: Pt, dir: Pt, l: number, w: number): Poly {
 	const a = scale(norm(dir), l / 2), b = scale(perp(norm(dir)), w / 2);
 	return [add(add(c, a), b), add(sub(c, a), b), sub(sub(c, a), b), sub(add(c, a), b)];
+}
+
+// Round dots for many trees, a few paths instead of thousands of circles: each dot is a zero-length line with
+// round ends, and dots of about the same size share one path.
+function dots(list: { x: number; y: number; r: number }[], color: string, k: number, dx: number, dy: number): Node {
+	const by = new Map<number, string[]>();
+	for (const c of list) {
+		const w = Math.max(0.5, Math.round(c.r * k * 4) / 2);
+		by.set(w, [...(by.get(w) ?? []), `M${f(c.x + c.r * dx)} ${f(c.y + c.r * dy)}h0`]);
+	}
+	return g(
+		{ fill: 'none', stroke: color, 'stroke-linecap': 'round' },
+		[...by].map(([w, ds]) => el('path', { d: ds.join(''), 'stroke-width': w })),
+	);
 }
 
 // A roof ridge: the line down the middle of the long side.
