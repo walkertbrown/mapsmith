@@ -93,4 +93,15 @@ describe('generateTown', () => {
 		for (const m of svg.matchAll(/<path id="ms[^"]*" d="([^"]*)"/g)) expect(m[1]).not.toMatch(/Z$/);
 		expect(toString(renderTown(t, { names: false }))).not.toContain('<textPath');
 	});
+
+	it('paints the country green when asked, and leaves the town alone', () => {
+		const a = generateTown({ seed: 'kilo', size: 'town', water: 'river' });
+		const b = generateTown({ seed: 'kilo', size: 'town', water: 'river', land: 'green' });
+		expect(b.buildings).toEqual(a.buildings);
+		const pa = toString(renderTown(a)), pb = toString(renderTown(b));
+		expect(pb).not.toBe(pa);
+		expect(pb).toContain('#cbd49c');
+		expect(pa).not.toContain('#cbd49c');
+		expect(toString(renderTown(b, { palette: DARK }))).toContain('#262f21');
+	});
 });

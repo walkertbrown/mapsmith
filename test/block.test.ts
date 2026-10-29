@@ -4,9 +4,9 @@ import { DEFAULTS, generateTown } from '../src/town';
 
 describe('parseBlock', () => {
 	it('reads every key, with the words people are likely to type', () => {
-		const { opts, problems } = parseBlock('seed: Saltmarch 7\nsize: Large town\nwater: harbour\nside: E\nwalls: no\nname: Gullhaven\n');
+		const { opts, problems } = parseBlock('seed: Saltmarch 7\nsize: Large town\nwater: harbour\nside: E\nwalls: no\nland: grass\nname: Gullhaven\n');
 		expect(problems).toEqual([]);
-		expect(opts).toEqual({ seed: 'Saltmarch 7', size: 'large-town', water: 'coast', side: 'east', walls: false, name: 'Gullhaven' });
+		expect(opts).toEqual({ seed: 'Saltmarch 7', size: 'large-town', water: 'coast', side: 'east', walls: false, land: 'green', name: 'Gullhaven' });
 	});
 	it('falls back to the defaults and says what it could not use', () => {
 		const { opts, problems } = parseBlock('size: huge\ncolour: red\njust words\n\n# a comment');

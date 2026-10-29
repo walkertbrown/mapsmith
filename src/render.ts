@@ -39,6 +39,7 @@ export interface Palette {
 	label: string;
 	badge: string;
 	badgeInk: string;
+	country?: Partial<Palette>; // what changes when the country is painted green
 }
 
 export const LIGHT: Palette = {
@@ -70,6 +71,16 @@ export const LIGHT: Palette = {
 	label: '#3f3229',
 	badge: '#fbf6e9',
 	badgeInk: '#7a2e1f',
+	country: {
+		land: '#cbd49c',
+		meadow: '#c0cc8e',
+		field: ['#d2d69e', '#c4ce8c', '#dad8a3', '#bccb88'],
+		hedge: '#97a866',
+		garden: '#d3d8a7',
+		tree: '#80985f',
+		treeDark: '#4b6136',
+		treeLight: '#a5b97c',
+	},
 };
 
 export const DARK: Palette = {
@@ -101,6 +112,16 @@ export const DARK: Palette = {
 	label: '#e8dfc8',
 	badge: '#2b2620',
 	badgeInk: '#f0b49a',
+	country: {
+		land: '#262f21',
+		meadow: '#29342a',
+		field: ['#2e3826', '#2a3423', '#333b29', '#283222'],
+		hedge: '#3f4c2e',
+		garden: '#2c3527',
+		tree: '#465a37',
+		treeDark: '#1f2a19',
+		treeLight: '#5c7049',
+	},
 };
 
 const f = (n: number) => Math.round(n * 10) / 10;
@@ -117,7 +138,8 @@ export interface RenderOptions {
 }
 
 export function renderTown(t: Town, o: RenderOptions = {}): Node {
-	const P = o.palette ?? LIGHT;
+	const base = o.palette ?? LIGHT;
+	const P: Palette = t.opts.land === 'green' ? { ...base, ...base.country } : base;
 	const r = makeRng(`${t.opts.seed}:paint`);
 	const u = (m: number) => m / t.mpu;
 	const kids: Node[] = [];
@@ -225,7 +247,9 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 	// street and quarter names, under the numbers, with a halo of land so they read over roofs
 	if (o.names !== false && t.labels.length) {
 		const id = `ms${hashSeed(`${t.opts.seed}:${t.opts.size}:${t.opts.water}:${t.name}`).toString(36)}`;
-		const halo = { stroke: P.land, 'stroke-width': 3, 'stroke-linejoin': 'round', 'paint-order': 'stroke' };
+		// streets and quarters sit in the town, so their halo is paving; where the roads go is out in the country
+		const halo = { stroke: P.street, 'stroke-width': 3, 'stroke-linejoin': 'round', 'paint-order': 'stroke' };
+		const out = { ...halo, stroke: P.land };
 		const defs: Node[] = [];
 		const words: Node[] = [];
 		t.labels.forEach((l, i) => {
@@ -239,7 +263,7 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 			} else if (l.kind === 'quarter') {
 				words.push(el('text', { x: f(l.at.x), y: f(l.at.y + 4), 'font-size': 12, 'letter-spacing': 2.5, 'text-anchor': 'middle', opacity: 0.85, ...halo }, [l.text]));
 			} else {
-				words.push(el('text', { x: f(l.at.x), y: f(l.at.y + 4), 'font-size': 11, 'font-style': 'italic', 'text-anchor': 'middle', ...halo }, [l.text]));
+				words.push(el('text', { x: f(l.at.x), y: f(l.at.y + 4), 'font-size': 11, 'font-style': 'italic', 'text-anchor': 'middle', ...out }, [l.text]));
 			}
 		});
 		kids.push(el('defs', {}, defs));
@@ -333,8 +357,9 @@ function scaleBar(t: Town, P: Palette): Node {
 	const kids: Node[] = [];
 	for (let i = 0; i < 2; i++) kids.push(el('rect', { x: f(x0 + i * seg), y: y0, width: f(seg), height: 6, fill: i % 2 ? P.badge : P.ink, stroke: P.ink, 'stroke-width': 1 }));
 	for (let i = 0; i <= 2; i++) kids.push(el('text', { x: f(x0 + i * seg), y: y0 - 6, 'text-anchor': 'middle' }, [String(i * step)]));
-	kids.push(el('text', { x: f(x0 + 2 * seg + 8), y: y0 + 7 }, ['m']));
-	return g({ 'font-family': 'Georgia, serif', 'font-size': 12, fill: P.label }, kids);
+	kids.push(el('text', { x: f(x0 + 2 * seg + 10), y: y0 + 7 }, ['m']));
+	// a halo of land, since woods can run under the numbers
+	return g({ 'font-family': 'Georgia, serif', 'font-size': 12, fill: P.label, stroke: P.land, 'stroke-width': 3, 'stroke-linejoin': 'round', 'paint-order': 'stroke' }, kids);
 }
 
 function compass(t: Town, P: Palette): Node {

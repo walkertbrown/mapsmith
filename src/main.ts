@@ -94,6 +94,11 @@ class TownMap extends MarkdownRenderChild {
 		const walls = bar.createEl('button', { text: opts.walls ? 'Walls' : 'No walls', cls: 'mapsmith-toggle' });
 		walls.toggleClass('is-on', opts.walls);
 		walls.addEventListener('click', () => this.set('walls', opts.walls ? 'no' : 'yes'));
+		const green = opts.land === 'green';
+		const land = bar.createEl('button', { text: green ? 'Green' : 'Parchment', cls: 'mapsmith-toggle' });
+		land.toggleClass('is-on', green);
+		land.setAttr('aria-label', 'How the country around the town is painted');
+		land.addEventListener('click', () => this.set('land', green ? 'parchment' : 'green'));
 		const again = bar.createEl('button', { text: 'New town', cls: 'mod-cta' });
 		again.addEventListener('click', () => this.set('seed', newSeed()));
 		if (problems.length) root.createDiv({ cls: 'mapsmith-problem', text: problems.join('. ') + '.' });

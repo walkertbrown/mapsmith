@@ -35,10 +35,12 @@ import { placeFor, quarterName, streetName, townName, type PlaceKind, type Place
 export type Size = 'hamlet' | 'village' | 'town' | 'large-town' | 'city';
 export type Water = 'none' | 'river' | 'coast' | 'estuary' | 'lake';
 export type Side = 'north' | 'south' | 'east' | 'west';
+export type Land = 'parchment' | 'green';
 
 export const SIZES: Size[] = ['hamlet', 'village', 'town', 'large-town', 'city'];
 export const WATERS: Water[] = ['none', 'river', 'coast', 'estuary', 'lake'];
 export const SIDES: Side[] = ['north', 'south', 'east', 'west'];
+export const LANDS: Land[] = ['parchment', 'green'];
 
 export interface TownOptions {
 	seed: string;
@@ -46,6 +48,7 @@ export interface TownOptions {
 	water: Water;
 	side: Side; // where the sea or lake lies
 	walls: boolean;
+	land: Land; // how the country is painted; the town is the same either way
 	name?: string;
 }
 
@@ -139,7 +142,7 @@ export interface Town {
 const SIDE_DIR: Record<Side, Pt> = { north: pt(0, -1), south: pt(0, 1), east: pt(1, 0), west: pt(-1, 0) };
 export const W = 1000;
 
-export const DEFAULTS: TownOptions = { seed: 'mapsmith', size: 'town', water: 'river', side: 'south', walls: true };
+export const DEFAULTS: TownOptions = { seed: 'mapsmith', size: 'town', water: 'river', side: 'south', walls: true, land: 'parchment' };
 
 export function generateTown(o: Partial<TownOptions> = {}): Town {
 	const opts: TownOptions = { ...DEFAULTS, ...o };

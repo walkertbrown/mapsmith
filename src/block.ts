@@ -1,9 +1,9 @@
 // The `mapsmith` code block: `key: value` lines in, town options out, and back again when a button
 // changes one of them. Kept apart from main.ts so it can be tested without Obsidian.
 
-import { DEFAULTS, SIDES, SIZES, WATERS, type Side, type Size, type Town, type TownOptions, type Water, type Place } from './town';
+import { DEFAULTS, LANDS, SIDES, SIZES, WATERS, type Land, type Side, type Size, type Town, type TownOptions, type Water, type Place } from './town';
 
-export const KEYS = ['seed', 'size', 'water', 'side', 'walls', 'name'] as const;
+export const KEYS = ['seed', 'size', 'water', 'side', 'walls', 'land', 'name'] as const;
 export type Key = (typeof KEYS)[number];
 
 const ALIAS: Record<string, string> = {
@@ -19,6 +19,9 @@ const ALIAS: Record<string, string> = {
 	s: 'south',
 	e: 'east',
 	w: 'west',
+	grass: 'green',
+	grassy: 'green',
+	paper: 'parchment',
 };
 
 const clean = (v: string) => {
@@ -62,6 +65,10 @@ export function parseBlock(src: string): Parsed {
 			if (['yes', 'true', 'on', 'y'].includes(v)) opts.walls = true;
 			else if (['none', 'false', 'off'].includes(v)) opts.walls = false;
 			else problems.push('walls can be yes or no');
+		} else if (key === 'land') {
+			const v = clean(val);
+			if ((LANDS as string[]).includes(v)) opts.land = v as Land;
+			else problems.push(`land can be ${LANDS.join(' or ')}`);
 		} else problems.push(`no key "${key}"; try ${KEYS.join(', ')}`);
 	}
 	return { opts, problems };
