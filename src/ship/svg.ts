@@ -101,6 +101,8 @@ export interface ShipRenderOptions {
 	grid?: boolean;
 	/** an id prefix, so two maps in one note don't share patterns */
 	id?: string;
+	/** the map players see in a VTT: no numbers, and a secret door is only wall */
+	players?: boolean;
 }
 
 export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
@@ -178,7 +180,7 @@ export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 		kids.push(g({ transform: `translate(${f(cx)} ${f(cy)}) rotate(${st.rot * 90}) translate(${f((-fw * S) / 2)} ${f((-fh * S) / 2)}) scale(${S})` }, s.kids));
 	}
 
-	for (const k of d.doors) kids.push(door(k, P, X, Y));
+	for (const k of d.doors) kids.push(door(k, P, X, Y, o.players));
 
 	// room names
 	kids.push(
@@ -187,6 +189,8 @@ export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 			d.labels.map((l) => el('text', { x: X(l.x), y: Y(l.y), 'font-size': f(Math.max(4, l.size * S)), 'stroke-width': f(Math.max(2, l.size * S * 0.3)) }, [l.text])),
 		),
 	);
+
+	if (o.players) return el('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: `0 0 ${w * S} ${h * S}`, width: w * S, height: h * S }, kids);
 
 	// numbers, clickable like a town's places
 	const spots = badgeSpots(d, centres);
@@ -212,7 +216,7 @@ export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 	return el('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: `0 0 ${w * S} ${h * S}`, role: 'img', 'aria-label': d.name }, kids);
 }
 
-function door(k: Door, P: ShipPalette, X: (x: number) => number, Y: (y: number) => number): Node {
+function door(k: Door, P: ShipPalette, X: (x: number) => number, Y: (y: number) => number, players = false): Node {
 	// a door sits on the N or W edge of its cell
 	const [, dy] = sideDelta(k.side);
 	const horiz = dy !== 0;
@@ -232,7 +236,7 @@ function door(k: Door, P: ShipPalette, X: (x: number) => number, Y: (y: number) 
 		// the wall carries on; only the S gives it away
 		return g({}, [
 			g(at, [el('path', { d: `M${f(-S / 2)} 0H${f(S / 2)}`, stroke: P.wall, 'stroke-width': f(Math.max(1, P.wallWidth * S)) })]),
-			el('text', { x: f(cx), y: f(cy), 'font-family': 'Georgia, serif', 'font-size': f(S * 0.55), 'font-weight': 'bold', 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: P.door, stroke: P.floor, 'stroke-width': 3, 'paint-order': 'stroke' }, ['S']),
+			...(players ? [] : [el('text', { x: f(cx), y: f(cy), 'font-family': 'Georgia, serif', 'font-size': f(S * 0.55), 'font-weight': 'bold', 'text-anchor': 'middle', 'dominant-baseline': 'central', fill: P.door, stroke: P.floor, 'stroke-width': 3, 'paint-order': 'stroke' }, ['S'])]),
 		]);
 	const box = (h: number, fill: string, stroke?: string) => el('rect', { x: f(-len / 2), y: f(-h / 2), width: f(len), height: f(h), fill, ...(stroke ? { stroke, 'stroke-width': f(Math.max(1, S * 0.06)) } : {}) });
 	if (k.kind === 'window') {

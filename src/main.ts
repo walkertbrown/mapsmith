@@ -1,12 +1,13 @@
-import { Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, Plugin, TFile, normalizePath } from 'obsidian';
+import { App, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, Plugin, PluginSettingTab, SettingDefinitionItem, TFile, normalizePath, requestUrl } from 'obsidian';
 import { DUNGEON_KINDS, DUNGEON_SIZES, generateDungeon } from './dungeon';
 import { SHIP_SIZES, editBlock, newSeed, noteName, parseBlock, placeNote, roomNote, setKey, type DungeonOptions, type Key, type ShipOptions } from './block';
-import { DARK, LIGHT, renderTown, toDom } from './render';
+import { DARK, LIGHT, renderTown, toDom, toString } from './render';
 import { hashSeed } from './rng';
 import { generate, type GenResult } from './ship/generate';
 import { keyEntries, type Deck, type RoomInfo } from './ship/model';
 import { DUNGEON_DARK, DUNGEON_LIGHT, SHIP_DARK, SHIP_LIGHT, renderDeck, type ShipPalette } from './ship/svg';
 import { SIZES, TERRAINS, WATERS, generateTown, type Place, type Town } from './town';
+import { gridPixels, svgToPng, uvttData } from './vtt';
 
 const SIZE_TEXT: Record<string, string> = { hamlet: 'Hamlet', village: 'Village', town: 'Town', 'large-town': 'Large town', city: 'City' };
 const WATER_TEXT: Record<string, string> = { none: 'No water', river: 'River', coast: 'Coast', estuary: 'River mouth', lake: 'Lake' };
@@ -14,8 +15,18 @@ const TERRAIN_TEXT: Record<string, string> = { flat: 'Flat', hills: 'Hills', mou
 const SHIP_TEXT: Record<string, string> = { shuttle: 'Shuttle', corvette: 'Corvette', freighter: 'Freighter', station: 'Station' };
 const DUNGEON_TEXT: Record<string, string> = { lair: 'Lair', dungeon: 'Dungeon', deep: 'Deep', crypt: 'Crypt', keep: 'Keep' };
 
+/** Where a VTT key is checked, and mailed again. The only places the plugin goes online. */
+export const SERVER = 'https://bulkhead.bananafest-destiny.com';
+
+interface Settings {
+	key: string;
+	vtt: boolean;
+}
+
 export default class MapsmithPlugin extends Plugin {
-	onload() {
+	settings: Settings = { key: '', vtt: false };
+
+	async onload() {
 		this.registerMarkdownCodeBlockProcessor('mapsmith', (src, el, ctx) => {
 			ctx.addChild(new TownMap(this, el, ctx, src));
 		});
@@ -34,6 +45,8 @@ export default class MapsmithPlugin extends Plugin {
 			name: 'Insert a dungeon map',
 			editorCallback: (editor: Editor) => editor.replaceSelection(`\`\`\`mapsmith\nmap: dungeon\nseed: ${newSeed()}\nsize: dungeon\nkind: crypt\n\`\`\`\n`),
 		});
+		this.settings = Object.assign({ key: '', vtt: false }, (await this.loadData()) as Partial<Settings> | null);
+		this.addSettingTab(new MapsmithSettingTab(this.app, this));
 	}
 
 	/** Rewrites the block's body. False when the block can't be found where it was drawn. */
@@ -64,6 +77,45 @@ export default class MapsmithPlugin extends Plugin {
 			file = await vault.create(path, text());
 		}
 		if (file instanceof TFile) await workspace.getLeaf(true).openFile(file);
+	}
+
+	/** Asks the server whether the key in settings is good, turns VTT saving on or off by the answer, and says it in words. */
+	async checkKey(): Promise<string> {
+		const r = await requestUrl({ url: `${SERVER}/api/mapsmith/key`, method: 'POST', contentType: 'application/json', body: JSON.stringify({ key: this.settings.key }), throw: false }).catch(() => null);
+		if (r?.status !== 200) return 'Could not check the key. Check the connection and try again.';
+		const got = r.json as { ok?: boolean; sold?: boolean; buy?: string };
+		if (got.sold === false) return 'Mapsmith Pro isn\'t sold yet.';
+		this.settings.vtt = !!got.ok;
+		await this.saveData(this.settings);
+		if (got.ok) return 'Good key. Save for virtual tabletop is on in this vault.';
+		return `itch doesn't know that key for Mapsmith Pro. Paste the address of your download page, or the key at the end of it.${got.buy ? ` Keys are at ${got.buy}` : ''}`;
+	}
+
+	/** Mails the key again to the address that bought it. The server says the same whether or not it did. */
+	async mailKey(email: string): Promise<string> {
+		const r = await requestUrl({ url: `${SERVER}/api/mapsmith/key/mail`, method: 'POST', contentType: 'application/json', body: JSON.stringify({ email }), throw: false }).catch(() => null);
+		return r?.status === 200 ? 'If that address bought Mapsmith Pro, its key is on the way. Look in your mail in a minute.' : 'Could not ask for the key. Check the connection and try again.';
+	}
+
+	/** Writes a Universal VTT file next to the note: the players' map, its walls, doors and lights. */
+	async saveVtt(deck: Deck, palette: ShipPalette, name: string, sourcePath: string) {
+		if (!this.settings.vtt) {
+			new Notice('Saving for a virtual tabletop needs a key. Paste yours in Mapsmith\'s settings.');
+			return;
+		}
+		const data = uvttData(deck, 0);
+		const { x: w, y: h } = data.resolution.map_size;
+		const px = (data.resolution.pixels_per_grid = gridPixels(w, h));
+		const svg = renderDeck(deck, { palette, id: 'vtt', players: true });
+		svg.a.width = w * px;
+		svg.a.height = h * px;
+		data.image = await svgToPng(toString(svg), w * px, h * px);
+		const at = sourcePath.lastIndexOf('/');
+		const path = normalizePath(`${at < 0 ? '' : sourcePath.slice(0, at + 1)}${name.replace(/[\\/:*?"<>|#^[\]]/g, '')}.dd2vtt`);
+		const old = this.app.vault.getAbstractFileByPath(path);
+		if (old instanceof TFile) await this.app.vault.modify(old, JSON.stringify(data));
+		else await this.app.vault.create(path, JSON.stringify(data));
+		new Notice(`Saved ${path}. Roll20 imports it as it is; Foundry reads it with the Universal Battlemap Importer module.`);
 	}
 }
 
@@ -236,6 +288,14 @@ class TownMap extends MarkdownRenderChild {
 		});
 		const ship = s.name.replace(/^Derelict — /, '');
 		const deckName = s.decks.length > 1 ? deck.name : undefined;
+		const vtt = root.createDiv({ cls: 'mapsmith-tools' }).createEl('button', { text: 'Save for virtual tabletop' });
+		vtt.addEventListener('click', () => {
+			vtt.disabled = true;
+			this.plugin
+				.saveVtt(deck, palette, deckName ? `${ship} ${deckName}` : ship, this.ctx.sourcePath)
+				.catch((e: unknown) => new Notice(`Could not save the VTT file: ${e instanceof Error ? e.message : String(e)}`))
+				.finally(() => (vtt.disabled = false));
+		});
 		this.pickable(svg, items, (i) => this.drawRoom(card, i < 0 ? undefined : rooms[i], ship, deckName, what));
 	}
 
@@ -278,5 +338,42 @@ class TownMap extends MarkdownRenderChild {
 		hook.appendText(p.hook);
 		const open = card.createEl('button', { text: 'Open its note' });
 		open.addEventListener('click', () => void this.plugin.openNote(t.name, noteName(p), () => placeNote(t, p, this.ctx.sourcePath), this.ctx.sourcePath));
+	}
+}
+
+class MapsmithSettingTab extends PluginSettingTab {
+	constructor(app: App, private plugin: MapsmithPlugin) {
+		super(app, plugin);
+	}
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		const p = this.plugin;
+		return [
+			{
+				name: 'Pro key',
+				desc: 'The address of your itch download page for Mapsmith Pro, or the key at the end of it. It turns on Save for virtual tabletop under each ship and dungeon. Check asks this plugin\'s server once, and saving stays on after that, offline too. The key is kept in this vault\'s plugin folder.',
+				render: (setting) => {
+					const said = setting.descEl.createDiv({ cls: 'mapsmith-said' });
+					setting
+						.addText((t) =>
+							t.setPlaceholder('Download page address or key').setValue(p.settings.key).onChange(async (v) => {
+								p.settings.key = v.trim();
+								await p.saveData(p.settings);
+							}),
+						)
+						.addButton((b) => b.setButtonText('Check').onClick(async () => said.setText(await p.checkKey())));
+				},
+			},
+			{
+				name: 'Lost your key?',
+				desc: 'Type the email you bought Mapsmith Pro with, and its key is mailed there.',
+				render: (setting) => {
+					let email = '';
+					const said = setting.descEl.createDiv({ cls: 'mapsmith-said' });
+					setting
+						.addText((t) => t.setPlaceholder('you@example.com').onChange((v) => (email = v.trim())))
+						.addButton((b) => b.setButtonText('Mail my key').onClick(async () => said.setText(await p.mailKey(email))));
+				},
+			},
+		];
 	}
 }

@@ -146,3 +146,14 @@
 	color: var(--text-muted);
 	margin-left: 6px;
 }
+
+.mapsmith-tools {
+	margin-top: 8px;
+}
+
+.mapsmith-said:empty {
+	display: none;
+}
+.mapsmith-said {
+	padding: 6px 0 2px;
+}

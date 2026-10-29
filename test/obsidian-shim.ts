@@ -45,6 +45,7 @@ export function installDomHelpers() {
 	};
 	(globalThis as unknown as Record<string, unknown>).createSpan = (o?: Opts) => make.call(undefined, 'span', o);
 	(globalThis as unknown as Record<string, unknown>).createDiv = (o?: Opts) => make.call(undefined, 'div', o);
+	(globalThis as unknown as Record<string, unknown>).createEl = (tag: string, o?: Opts) => make.call(undefined, tag, o);
 }
 
 export class TFile {

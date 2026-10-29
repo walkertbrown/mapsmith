@@ -81,9 +81,15 @@ kind: crypt
 
 Each room has a line on what's there, and some have a hazard or treasure; the room at the far end always has treasure. Above the map is the dungeon's story with a hook. **Open its note** writes a room to a folder named after the dungeon, and **New dungeon** rolls a new seed. The command **Insert a dungeon map** adds a dungeon block.
 
+## Pro
+
+Everything above is free. Mapsmith Pro is a one-time payment of $6 on itch, and it adds a **Save for virtual tabletop** button under every dungeon and ship. It writes a Universal VTT file (`.dd2vtt`) beside your note: the map as your players should see it, with no room numbers and secret doors drawn as plain wall, plus the walls, doors, windows and lights already placed. Roll20 imports it as it is, and Foundry reads it with the Universal Battlemap Importer module.
+
+After you buy, copy your download page's address. Paste it into Mapsmith's settings under **Pro key** and press **Check**. Pro stays on in that vault from then on. Lost it? Type the email you bought with under **Lost your key?**.
+
 ## Privacy
 
-Mapsmith makes no network requests. Everything is drawn on your device from the seed.
+Mapsmith has no accounts and collects nothing. Maps are drawn on your device from the seed. It goes online only when you press **Check** or **Mail my key** in its settings. Check sends the Pro key you pasted to this plugin's server (bulkhead.bananafest-destiny.com), which asks itch whether the key is real; the server keeps a hash of a good key, never the key. Mail my key sends the email you typed to the same server, which asks itch for that address's key and mails it there; it keeps only a hash of the address, so it mails no more than once an hour. Nothing else ever leaves your vault. Opening a room's note writes a new note, and saving for a virtual tabletop writes a `.dd2vtt` file beside the map's note.
 
 ## Licence
 

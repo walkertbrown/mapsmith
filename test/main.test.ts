@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeAll, describe, expect, it } from 'vitest';
-import { App, ctx, installDomHelpers } from './obsidian-shim';
+import { App, Notice, ctx, installDomHelpers, requestUrl } from './obsidian-shim';
 import MapsmithPlugin from '../src/main';
 
 beforeAll(() => installDomHelpers());
@@ -25,7 +25,7 @@ function setup(note: string) {
 	render();
 	const flush = () => new Promise((r) => setTimeout(r, 0));
 	const content = () => app.notes.get('Towns/Map.md')!.content;
-	return { app, el, render, flush, content };
+	return { app, el, plugin, render, flush, content };
 }
 
 const NOTE = '# Saltmarch\n\n```mapsmith\nseed: salt\nsize: village\nwater: coast\n```\n';
@@ -77,5 +77,32 @@ describe('the town block', () => {
 		const { el } = setup('```mapsmith\nsize: enormous\n```\n');
 		expect(el.querySelector('.mapsmith-problem')!.textContent).toContain('size can be');
 		expect(el.querySelector('svg')).not.toBeNull();
+	});
+});
+
+describe('saving for a virtual tabletop', () => {
+	const DUNGEON = '# Below\n\n```mapsmith\nmap: dungeon\nseed: saltmarch\n```\n';
+
+	it('writes nothing without a key, and says where the key goes', async () => {
+		const { app, el, flush } = setup(DUNGEON);
+		const save = Array.from(el.querySelectorAll('button')).find((b) => b.textContent === 'Save for virtual tabletop')!;
+		save.click();
+		await flush();
+		expect([...app.notes.keys()]).toEqual(['Towns/Map.md']);
+		expect(Notice.last).toContain("Mapsmith's settings");
+	});
+
+	it('turns saving on for a key the server knows, and off for one it does not', async () => {
+		const { plugin } = setup(DUNGEON);
+		plugin.settings.key = 'somekey';
+		requestUrl.reply = () => ({ status: 200, json: { ok: true, sold: true } });
+		expect(await plugin.checkKey()).toMatch(/^Good key/);
+		expect(plugin.settings.vtt).toBe(true);
+		expect(requestUrl.sent.at(-1)!.url).toMatch(/\/api\/mapsmith\/key$/);
+		requestUrl.reply = () => ({ status: 200, json: { ok: false, sold: true, buy: 'https://example.itch.io/x' } });
+		expect(await plugin.checkKey()).toContain('https://example.itch.io/x');
+		expect(plugin.settings.vtt).toBe(false);
+		requestUrl.reply = () => ({ status: 200, json: { ok: false, sold: false } });
+		expect(await plugin.checkKey()).toBe("Mapsmith Pro isn't sold yet.");
 	});
 });

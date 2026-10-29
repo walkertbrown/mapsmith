@@ -29,7 +29,7 @@ export const STAMP_KINDS = Object.keys(STAMP_LABELS) as StampKind[]
 
 /** Stamps that tokens cannot see through — exported as objects_line_of_sight. */
 export const blocksSight = (kind: Stamp['kind']) => kind.startsWith('img:') ? (imageLookup(kind.slice(4))?.blocks ?? false) : BLOCKS_SIGHT.has(kind as StampKind)
-export const BLOCKS_SIGHT = new Set<StampKind>(['crate', 'locker', 'reactor', 'pillar', 'engine', 'cryopod', 'lift', 'reactor2', 'container', 'cryobank', 'shuttle', 'tank'])
+export const BLOCKS_SIGHT = new Set<StampKind>(['crate', 'locker', 'reactor', 'pillar', 'engine', 'cryopod', 'lift', 'reactor2', 'container', 'cryobank', 'shuttle', 'tank', 'statue', 'bookcase'])
 /** Stamps that connect decks. */
 export const LINKS_DECKS = new Set<string>(['ladder', 'lift', 'stairs'])
 
