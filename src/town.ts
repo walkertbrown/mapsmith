@@ -29,7 +29,7 @@ import {
 } from './geom';
 import { chance, fork, int, makeNoise, makeRng, pick, range, shuffle, type Rng } from './rng';
 import { edgeKey, path, voronoi, type Cell, type Graph } from './voronoi';
-import { placeFor, townName, type PlaceKind, type PlaceText } from './names';
+import { placeFor, quarterName, streetName, townName, type PlaceKind, type PlaceText, type QuarterHint, type StreetHint } from './names';
 
 export type Size = 'hamlet' | 'village' | 'town' | 'large-town' | 'city';
 export type Water = 'none' | 'river' | 'coast' | 'estuary' | 'lake';
@@ -95,6 +95,14 @@ export interface Field {
 	poly: Poly;
 	tone: number;
 }
+// Words on the map: a street along its road, a quarter over its wards, or where a road leaves the map.
+export interface Label {
+	kind: 'street' | 'quarter' | 'exit';
+	text: string;
+	at: Pt;
+	line?: Pt[]; // a street's text runs along this, left to right
+	size?: number; // a street's letters: smaller for lanes than for the roads through town
+}
 export interface Tree {
 	x: number;
 	y: number;
@@ -124,6 +132,7 @@ export interface Town {
 	fields: Field[];
 	trees: Tree[];
 	places: Place[];
+	labels: Label[];
 }
 
 const SIDE_DIR: Record<Side, Pt> = { north: pt(0, -1), south: pt(0, 1), east: pt(1, 0), west: pt(-1, 0) };
@@ -525,6 +534,17 @@ export function generateTown(o: Partial<TownOptions> = {}): Town {
 	const water = waterOutlines(g, waterAt);
 
 	const name = opts.name?.trim() || townName(r.names, opts);
+	// the lanes between built wards, for naming; split where they turn so a name runs along one street
+	const built = (i: number) => kinds[i] === 'dense' || kinds[i] === 'docks' || kinds[i] === 'market';
+	const sides = new Map<string, number[]>();
+	for (const c of cells) c.verts.forEach((v, k) => {
+		const key = edgeKey(v, at(c.verts, k + 1));
+		sides.set(key, [...(sides.get(key) ?? []), c.i]);
+	});
+	const laneEdges = new Set<string>();
+	for (const [key, cs] of sides) if (cs.length === 2 && cs.every(built) && !roadEdges.has(key) && !riverEdges.has(key) && !wallEdges.has(key)) laneEdges.add(key);
+	const lanes = straightChains(laneEdges, g.verts, 0.85).map((l) => chaikin(l, 2));
+
 	const town: Town = {
 		opts,
 		name,
@@ -548,8 +568,11 @@ export function generateTown(o: Partial<TownOptions> = {}): Town {
 		fields,
 		trees,
 		places: [],
+		labels: [],
 	};
 	town.places = placePlaces(town, r.names, spec.places);
+	const keep = wards.find((w) => w.kind === 'keep');
+	town.labels = nameTown(town, fork(r.names, 'labels'), keep ? centroid(keep.poly) : null, lanes);
 	return town;
 }
 
@@ -794,6 +817,181 @@ function placePlaces(t: Town, r: Rng, count: number): Place[] {
 		places.push({ n, kind, at: at_, building: bi >= 0 ? bi : undefined, ...placeFor(r, kind, t) });
 	}
 	return places;
+}
+
+// Whether a line keeps to one heading: no turn between its first and any later step is more than `max` radians.
+function straight(line: Pt[], max: number): boolean {
+	const d0 = norm(sub(line[1] as Pt, line[0] as Pt));
+	for (let i = 1; i + 1 < line.length; i++) if (Math.acos(Math.max(-1, Math.min(1, dot(d0, norm(sub(line[i + 1] as Pt, line[i] as Pt)))))) > max) return false;
+	return true;
+}
+
+// Edges joined into lines that go on as straight as they can: at each corner the line takes the edge that turns
+// least, and stops where every way on turns by more than `max` radians.
+function straightChains(edges: Set<string>, verts: Pt[], max: number): Pt[][] {
+	const adj = new Map<number, number[]>();
+	for (const key of edges) {
+		const [a, b] = key.split(',').map(Number) as [number, number];
+		adj.set(a, [...(adj.get(a) ?? []), b]);
+		adj.set(b, [...(adj.get(b) ?? []), a]);
+	}
+	const used = new Set<string>();
+	const P = (v: number) => verts[v] as Pt;
+	const extend = (line: number[]) => {
+		for (;;) {
+			const v = line[line.length - 1] as number, prev = line[line.length - 2] as number;
+			const d0 = norm(sub(P(v), P(prev)));
+			let best = -1, turn = max;
+			for (const n of adj.get(v) ?? []) {
+				if (used.has(edgeKey(v, n))) continue;
+				const t = Math.acos(Math.max(-1, Math.min(1, dot(d0, norm(sub(P(n), P(v)))))));
+				if (t < turn) {
+					best = n;
+					turn = t;
+				}
+			}
+			if (best < 0) return line;
+			used.add(edgeKey(v, best));
+			line.push(best);
+		}
+	};
+	const out: Pt[][] = [];
+	for (const key of edges) {
+		if (used.has(key)) continue;
+		used.add(key);
+		const [a, b] = key.split(',').map(Number) as [number, number];
+		const fwd = extend([a, b]);
+		const back = extend([b, a]);
+		out.push([...back.slice(2).reverse(), ...fwd].map(P));
+	}
+	return out;
+}
+
+function nameTown(t: Town, r: Rng, keepAt: Pt | null, lanes: Pt[][]): Label[] {
+	const out: Label[] = [];
+	const u = (m: number) => m / t.mpu;
+	const core = t.wards.filter((w) => w.kind === 'dense' || w.kind === 'docks');
+	const built = core.length >= 3 ? core : t.wards.filter((w) => w.kind === 'sparse' || w.kind === 'market');
+	const reach = Math.max(...built.map((w) => dist(centroid(w.poly), t.center)), u(40));
+	// what words must not sit on: numbers, the title, the compass and the scale bar
+	const busy: { p: Pt; r: number }[] = [
+		...t.places.map((p) => ({ p: p.at, r: 16 })),
+		{ p: pt(t.w / 2, 38), r: 110 },
+		{ p: pt(t.w - 50, t.h - 60), r: 50 },
+		{ p: pt(110, t.h - 34), r: 90 },
+	];
+	const clear = (q: Pt, rad: number) => busy.every((b) => dist(b.p, q) > b.r + rad);
+
+	// streets: each main road's own stretch inside the town, then the longest lanes, where there's room for a name
+	const used = new Set<string>();
+	const done: Pt[][] = [];
+	const street = (seg: Pt[], hint: StreetHint, size: number, bend: number) => {
+		const name = streetName(r, hint, used);
+		const need = name.length * size * 0.6 + 16;
+		const len = polyLength(seg);
+		// try the middle of the stretch first, then either side of it, for a straight bit clear of the numbers
+		for (const off of [0, -0.12, 0.12, -0.25, 0.25, -0.38, 0.38]) {
+			const c = len / 2 + off * len;
+			if (c - need / 2 < 0 || c + need / 2 > len) continue;
+			const win = Array.from({ length: 9 }, (_, k) => along(seg, c - need / 2 + (need * k) / 8).p);
+			if (!straight(win, bend)) continue;
+			const mid = win[4] as Pt;
+			if (!clear(mid, need / 2.2)) continue;
+			// the window, pulled out to either side, keeps the text along the street and right way up
+			const line = (win[8] as Pt).x < (win[0] as Pt).x ? win.slice().reverse() : win;
+			out.push({ kind: 'street', text: name, at: mid, line, size });
+			busy.push({ p: mid, r: need / 2.2 });
+			done.push(seg);
+			return;
+		}
+		used.delete(name);
+	};
+	let high = false;
+	t.roads.forEach((road) => {
+		let a = 0;
+		while (a < road.length && done.some((l) => lineDist(road[a] as Pt, l) < t.roadW * 2)) a++;
+		let b = a;
+		while (b < road.length && dist(road[b] as Pt, t.center) < reach) b++;
+		const seg = road.slice(a, b);
+		if (seg.length < 3) return;
+		const hint: StreetHint =
+			!high && lineDist(t.center, seg) < reach * 0.4
+				? 'high'
+				: t.bridges.some((x) => lineDist(x.p, seg) < u(8))
+					? 'bridge'
+					: keepAt && lineDist(keepAt, seg) < u(60)
+						? 'castle'
+						: t.wards.some((w) => w.kind === 'docks' && lineDist(centroid(w.poly), seg) < u(50))
+							? 'harbour'
+							: t.gates.some((x) => lineDist(x.p, seg) < u(10))
+								? 'gate'
+								: null;
+		if (hint === 'high') high = true;
+		street(seg, hint, 11, 0.6);
+	});
+	const most = { hamlet: 0, village: 1, town: 3, 'large-town': 5, city: 8 }[t.opts.size];
+	lanes
+		.filter((l) => dist(l[0] as Pt, t.center) < reach * 1.1)
+		.sort((p, q) => polyLength(q) - polyLength(p))
+		.slice(0, most * 2)
+		.forEach((l) => {
+			if (out.filter((x) => x.kind === 'street').length < t.roads.length + most) street(l, keepAt && lineDist(keepAt, l) < u(40) ? 'castle' : null, 9.5, 0.75);
+		});
+
+	// quarters: the packed wards split by their bearing from the square, each named for what's in it
+	const k = { hamlet: 0, village: 0, town: 3, 'large-town': 4, city: 5 }[t.opts.size];
+	if (k && core.length >= k * 2) {
+		const a0 = range(r, 0, Math.PI * 2);
+		const groups: Ward[][] = Array.from({ length: k + 1 }, () => []);
+		for (const w of core) {
+			const c = centroid(w.poly);
+			if (dist(c, t.center) < reach * 0.3) (groups[k] as Ward[]).push(w);
+			else {
+				const a = (Math.atan2(c.y - t.center.y, c.x - t.center.x) - a0 + Math.PI * 4) % (Math.PI * 2);
+				(groups[Math.floor((a / (Math.PI * 2)) * k)] as Ward[]).push(w);
+			}
+		}
+		const qused = new Set<string>();
+		groups.forEach((ws, gi) => {
+			if (ws.length < 2) return;
+			const cs = ws.map((w) => centroid(w.poly));
+			const m = scale(cs.reduce((s, c) => add(s, c), pt(0, 0)), 1 / cs.length);
+			const d = sub(m, t.center);
+			const hint: QuarterHint =
+				gi === k
+					? 'middle'
+					: ws.some((w) => w.kind === 'docks')
+						? 'docks'
+						: keepAt && dist(keepAt, m) < reach * 0.5
+							? 'castle'
+							: t.river && lineDist(m, t.river) < u(40)
+								? 'river'
+								: Math.abs(d.x) > Math.abs(d.y)
+									? d.x > 0 ? 'east' : 'west'
+									: d.y > 0 ? 'south' : 'north';
+			const text = quarterName(r, hint, qused).toUpperCase();
+			const rad = text.length * 5;
+			const spot = [m, ...cs.sort((p, q) => dist(p, m) - dist(q, m))].find((q) => clear(q, rad));
+			if (!spot) return;
+			out.push({ kind: 'quarter', text, at: spot });
+			busy.push({ p: spot, r: rad });
+		});
+	}
+
+	// where each road leaves the map, and the place it goes
+	const ends: Pt[] = [];
+	for (const road of t.roads) {
+		const end = road[road.length - 1] as Pt;
+		if (ends.some((e) => dist(e, end) < 60)) continue;
+		ends.push(end);
+		const toward = norm(sub(t.center, end));
+		const name = `to ${townName(r, { water: 'none' })}`;
+		const q = add(end, scale(toward, 34));
+		const at_ = pt(Math.min(t.w - 20 - name.length * 3.3, Math.max(20 + name.length * 3.3, q.x)), Math.min(t.h - 16, Math.max(24, q.y)));
+		if (!clear(at_, name.length * 3.3)) continue;
+		out.push({ kind: 'exit', text: name, at: at_ });
+	}
+	return out;
 }
 
 export const _test = { cutLots, strips, chains, smoothFixed, polyLength, along, shrink, pick };

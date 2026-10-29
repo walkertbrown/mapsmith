@@ -233,3 +233,46 @@ export function placeFor(r: Rng, kind: PlaceKind, _t: unknown): PlaceText {
 }
 
 export const LABELS: Record<PlaceKind, string> = Object.fromEntries(Object.entries(KINDS).map(([k, v]) => [k, v.label])) as Record<PlaceKind, string>;
+
+// Streets and quarters. A hint says what the street passes or where it leads; without one it's named for a trade.
+export type StreetHint = 'high' | 'bridge' | 'castle' | 'temple' | 'harbour' | 'gate' | 'mill' | null;
+const TRADES = ['Tanners', 'Coopers', 'Weavers', 'Chandlers', 'Cutlers', 'Fullers', 'Bakers', 'Brewers', 'Saddlers', 'Dyers', 'Potters', 'Ropers', 'Glovers', 'Masons', 'Skinners', 'Tinkers'];
+const WAYS = ['Street', 'Lane', 'Row', 'Way', 'Walk'];
+const HINTED: Record<Exclude<StreetHint, null>, string[]> = {
+	high: ['High Street', 'Market Street', 'Broad Street', 'Kings Way'],
+	bridge: ['Bridge Street', 'Bridge Lane', 'Ford Street'],
+	castle: ['Castle Street', 'Castle Hill', 'Keep Lane'],
+	temple: ['Temple Street', 'Chapel Lane', 'Bell Street'],
+	harbour: ['Harbour Street', 'Quay Street', 'Wharf Lane', 'Fish Street'],
+	gate: ['Gate Street', 'Wall Lane', 'Bar Street'],
+	mill: ['Mill Lane', 'Mill Street', 'Weir Lane'],
+};
+export function streetName(r: Rng, hint: StreetHint, used: Set<string>): string {
+	// a trade names one street only
+	const free = (n: string) => !used.has(n) && !used.has(n.split(' ')[0] as string);
+	const tries = [...(hint ? HINTED[hint] : []), ...Array.from({ length: 12 }, () => `${pick(r, TRADES)} ${pick(r, WAYS)}`)];
+	const name = tries.find((n) => free(n) && (hint === null || chance(r, 0.8))) ?? tries.find(free) ?? 'Back Lane';
+	used.add(name);
+	if (TRADES.includes(name.split(' ')[0] as string)) used.add(name.split(' ')[0] as string);
+	return name;
+}
+
+export type QuarterHint = 'middle' | 'docks' | 'castle' | 'temple' | 'river' | 'north' | 'south' | 'east' | 'west';
+const QUARTERS: Record<QuarterHint, string[]> = {
+	middle: ['Old Town', 'Market Ward', 'the Chepe'],
+	docks: ['the Docks', 'Fish Quarter', 'Saltside', 'the Strand'],
+	castle: ['Castle Ward', 'Castle Hill', 'Keepside'],
+	temple: ['Temple Ward', 'the Close', 'Bellside'],
+	river: ['Riverside', 'the Bankside', 'Waterside'],
+	north: ['Northgate', 'the Northern Ward', 'Highfield'],
+	south: ['Southgate', 'the Southern Ward', 'Lowtown'],
+	east: ['Eastgate', 'the Eastern Ward', 'Dawnside'],
+	west: ['Westgate', 'the Western Ward', 'Duskside'],
+};
+const TRADE_QUARTERS = ['Tanners Quarter', 'Weavers Quarter', 'the Narrows', 'New Town', 'the Warrens', 'Coopers Quarter', 'Dyers Quarter'];
+export function quarterName(r: Rng, hint: QuarterHint, used: Set<string>): string {
+	const tries = [...QUARTERS[hint], ...(chance(r, 0.4) ? [] : TRADE_QUARTERS)];
+	const name = tries.find((n) => !used.has(n) && chance(r, 0.6)) ?? tries.find((n) => !used.has(n)) ?? pick(r, TRADE_QUARTERS);
+	used.add(name);
+	return name;
+}

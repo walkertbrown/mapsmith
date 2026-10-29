@@ -1,7 +1,7 @@
 // The town as SVG: a small tree of nodes that can become a string (for export and tests) or real DOM.
 
 import { add, along, norm, perp, polyLength, pt, scale, sub, type Poly, type Pt } from './geom';
-import { makeRng, range } from './rng';
+import { hashSeed, makeRng, range } from './rng';
 import type { Town } from './town';
 
 export interface Node {
@@ -102,6 +102,7 @@ const g = (a: Record<string, string | number>, kids: (Node | string)[]) => el('g
 export interface RenderOptions {
 	palette?: Palette;
 	labels?: boolean; // place numbers
+	names?: boolean; // streets, quarters and where the roads go
 	title?: boolean; // the town's name
 	scaleBar?: boolean;
 }
@@ -194,6 +195,30 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 				}),
 			),
 		);
+	}
+
+	// street and quarter names, under the numbers, with a halo of land so they read over roofs
+	if (o.names !== false && t.labels.length) {
+		const id = `ms${hashSeed(`${t.opts.seed}:${t.opts.size}:${t.opts.water}:${t.name}`).toString(36)}`;
+		const halo = { stroke: P.land, 'stroke-width': 3, 'stroke-linejoin': 'round', 'paint-order': 'stroke' };
+		const defs: Node[] = [];
+		const words: Node[] = [];
+		t.labels.forEach((l, i) => {
+			if (l.kind === 'street' && l.line) {
+				defs.push(el('path', { id: `${id}-${i}`, d: d(l.line, false) }));
+				words.push(
+					el('text', { 'font-size': l.size ?? 11, 'font-style': 'italic', dy: 3.5, ...halo }, [
+						el('textPath', { href: `#${id}-${i}`, startOffset: '50%', 'text-anchor': 'middle' }, [l.text]),
+					]),
+				);
+			} else if (l.kind === 'quarter') {
+				words.push(el('text', { x: f(l.at.x), y: f(l.at.y + 4), 'font-size': 12, 'letter-spacing': 2.5, 'text-anchor': 'middle', opacity: 0.85, ...halo }, [l.text]));
+			} else {
+				words.push(el('text', { x: f(l.at.x), y: f(l.at.y + 4), 'font-size': 11, 'font-style': 'italic', 'text-anchor': 'middle', ...halo }, [l.text]));
+			}
+		});
+		kids.push(el('defs', {}, defs));
+		kids.push(g({ class: 'mapsmith-names', 'font-family': 'Georgia, serif', fill: P.label }, words));
 	}
 
 	// numbers on the places

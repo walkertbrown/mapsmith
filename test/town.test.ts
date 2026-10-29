@@ -64,4 +64,33 @@ describe('generateTown', () => {
 		for (let i = 0; i < t.places.length; i++) expect(svg).toContain(`data-place="${i}"`);
 		expect(svg).not.toMatch(/NaN|undefined/);
 	});
+
+	it('names streets and quarters in towns and up, each name once', () => {
+		for (const seed of ['alpha', 'kilo', 'delta']) {
+			for (const size of ['town', 'large-town', 'city'] as const) {
+				const t = generateTown({ seed, size, water: 'river' });
+				const streets = t.labels.filter((l) => l.kind === 'street');
+				const quarters = t.labels.filter((l) => l.kind === 'quarter');
+				expect(streets.length, `${seed} ${size}`).toBeGreaterThanOrEqual(1);
+				expect(quarters.length, `${seed} ${size}`).toBeGreaterThanOrEqual(2);
+				const words = t.labels.filter((l) => l.kind !== 'exit').map((l) => l.text.toLowerCase());
+				expect(new Set(words).size).toBe(words.length);
+				for (const l of streets) {
+					const line = l.line ?? [];
+					expect(line.length).toBeGreaterThan(1);
+					// read left to right
+					expect((line[line.length - 1] as { x: number }).x).toBeGreaterThanOrEqual((line[0] as { x: number }).x);
+				}
+				for (const l of t.labels) expect(l.at.x >= 0 && l.at.x <= t.w && l.at.y >= 0 && l.at.y <= t.h).toBe(true);
+			}
+		}
+	});
+
+	it('draws street names along open paths, and leaves them off when asked', () => {
+		const t = generateTown({ seed: 'kilo', size: 'city', water: 'river' });
+		const svg = toString(renderTown(t));
+		expect(svg).toContain('<textPath');
+		for (const m of svg.matchAll(/<path id="ms[^"]*" d="([^"]*)"/g)) expect(m[1]).not.toMatch(/Z$/);
+		expect(toString(renderTown(t, { names: false }))).not.toContain('<textPath');
+	});
 });
