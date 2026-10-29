@@ -30,17 +30,20 @@ import {
 } from './geom';
 import { chance, fork, int, makeNoise, makeRng, pick, range, shuffle, type Rng } from './rng';
 import { edgeKey, path, voronoi, type Cell, type Graph } from './voronoi';
+import { carve, contours, makeHeight, type Relief, type Terrain } from './terrain';
 import { placeFor, quarterName, streetName, townName, type PlaceKind, type PlaceText, type QuarterHint, type StreetHint } from './names';
 
 export type Size = 'hamlet' | 'village' | 'town' | 'large-town' | 'city';
 export type Water = 'none' | 'river' | 'coast' | 'estuary' | 'lake';
 export type Side = 'north' | 'south' | 'east' | 'west';
 export type Land = 'parchment' | 'green';
+export type { Terrain } from './terrain';
 
 export const SIZES: Size[] = ['hamlet', 'village', 'town', 'large-town', 'city'];
 export const WATERS: Water[] = ['none', 'river', 'coast', 'estuary', 'lake'];
 export const SIDES: Side[] = ['north', 'south', 'east', 'west'];
 export const LANDS: Land[] = ['parchment', 'green'];
+export const TERRAINS: Terrain[] = ['flat', 'hills', 'mountains'];
 
 export interface TownOptions {
 	seed: string;
@@ -49,6 +52,7 @@ export interface TownOptions {
 	side: Side; // where the sea or lake lies
 	walls: boolean;
 	land: Land; // how the country is painted; the town is the same either way
+	terrain: Terrain;
 	name?: string;
 }
 
@@ -71,7 +75,7 @@ export const SPEC: Record<Size, SizeSpec> = {
 	city: { span: 1400, radius: 0.33, wards: 72, roads: 5, inner: 0.78, lot: 100, river: 22, places: 16 },
 };
 
-export type WardKind = 'market' | 'dense' | 'sparse' | 'temple' | 'keep' | 'docks' | 'park' | 'farm' | 'wood' | 'meadow' | 'water';
+export type WardKind = 'market' | 'dense' | 'sparse' | 'temple' | 'keep' | 'docks' | 'park' | 'farm' | 'wood' | 'meadow' | 'rock' | 'water';
 export type BuildingKind = 'house' | 'hall' | 'temple' | 'keep' | 'warehouse' | 'stall' | 'farmhouse';
 
 export interface Ward {
@@ -137,12 +141,15 @@ export interface Town {
 	trees: Tree[];
 	places: Place[];
 	labels: Label[];
+	relief: Relief[]; // contour rings, low to high; empty on flat ground
+	rockLevel: number | null; // above this the mountains are bare rock
 }
 
+const ROCK = 0.62; // height of the tree line in the mountains
 const SIDE_DIR: Record<Side, Pt> = { north: pt(0, -1), south: pt(0, 1), east: pt(1, 0), west: pt(-1, 0) };
 export const W = 1000;
 
-export const DEFAULTS: TownOptions = { seed: 'mapsmith', size: 'town', water: 'river', side: 'south', walls: true, land: 'parchment' };
+export const DEFAULTS: TownOptions = { seed: 'mapsmith', size: 'town', water: 'river', side: 'south', walls: true, land: 'parchment', terrain: 'flat' };
 
 export function generateTown(o: Partial<TownOptions> = {}): Town {
 	const opts: TownOptions = { ...DEFAULTS, ...o };
@@ -155,6 +162,7 @@ export function generateTown(o: Partial<TownOptions> = {}): Town {
 		lots: fork(root, 'lots'),
 		land: fork(root, 'land'),
 		names: fork(root, 'names'),
+		hills: fork(root, 'hills'),
 	};
 	const mpu = spec.span / W;
 	const u = (m: number) => m / mpu; // metres to map units
@@ -163,6 +171,10 @@ export function generateTown(o: Partial<TownOptions> = {}): Town {
 	const sea = SIDE_DIR[opts.side];
 	const hasSea = opts.water === 'coast' || opts.water === 'estuary';
 	const center = pt(W / 2 + range(r.sites, -0.04, 0.04) * W - (hasSea ? sea.x * R * 0.25 : 0), W / 2 + range(r.sites, -0.04, 0.04) * W - (hasSea ? sea.y * R * 0.25 : 0));
+
+	// the lie of the land: it climbs away from the sea or lake, or toward a side of its own
+	const up = hasSea || opts.water === 'lake' ? scale(sea, -1) : SIDE_DIR[pick(r.hills, SIDES)];
+	let height = makeHeight(r.hills, opts.terrain, center, R, W, up);
 
 	// sites: tight in town, looser over the fields
 	const d0 = Math.sqrt((Math.PI * R * R) / spec.wards);
@@ -216,7 +228,7 @@ export function generateTown(o: Partial<TownOptions> = {}): Town {
 			if (g.border.has(a) && g.border.has(b)) return Infinity;
 			if (vertAllWater(b)) return Infinity;
 			const m = lerp(g.verts[a] as Pt, g.verts[b] as Pt, 0.5);
-			return dist(g.verts[a] as Pt, g.verts[b] as Pt) * (0.4 + nw(m.x / 90 + 40, m.y / 90));
+			return dist(g.verts[a] as Pt, g.verts[b] as Pt) * (0.4 + nw(m.x / 90 + 40, m.y / 90) + height(m) * 6);
 		};
 		const towards = (dir: Pt) => (v: number) => g.border.has(v) && dot(norm(sub(g.verts[v] as Pt, center)), dir) > 0.55;
 		const down = opts.water === 'estuary' ? path(g, start, (v) => vertWater(v), meander) : path(g, start, towards(norm(axis)), meander);
@@ -226,6 +238,8 @@ export function generateTown(o: Partial<TownOptions> = {}): Town {
 			riverLine = [...up.reverse(), ...down.slice(1)];
 			for (let i = 0; i + 1 < riverLine.length; i++) riverEdges.add(edgeKey(riverLine[i] as number, riverLine[i + 1] as number));
 			for (const v of riverLine) riverVerts.add(v);
+			// the river cuts its valley
+			if (opts.terrain !== 'flat') height = carve(height, riverLine.map((v) => g.verts[v] as Pt), u(spec.river * 6 + 60));
 		}
 	}
 
@@ -281,7 +295,9 @@ export function generateTown(o: Partial<TownOptions> = {}): Town {
 			const e = g.edges.get(key) as [number, number];
 			if (e[1] < 0 || waterAt(e[0]) || waterAt(e[1])) return Infinity;
 			const m = lerp(g.verts[a] as Pt, g.verts[b] as Pt, 0.5);
-			let c = dist(g.verts[a] as Pt, g.verts[b] as Pt) * (0.7 + nr(m.x / 120, m.y / 120));
+			let c = dist(g.verts[a] as Pt, g.verts[b] as Pt) * (0.7 + nr(m.x / 120, m.y / 120) + height(m) * 3);
+			// climbing costs; roads wind round the tops and up the valleys
+			c += Math.abs(height(g.verts[b] as Pt) - height(g.verts[a] as Pt)) * u(900);
 			// a river or wall edge is crossed, never followed: a bridge or a gate
 			if (riverEdges.has(key)) c += u(60);
 			else if (wallEdges.has(key)) c += u(30);
@@ -390,6 +406,10 @@ export function generateTown(o: Partial<TownOptions> = {}): Town {
 		if (inner[c.i]) return 'dense';
 		if (urban[c.i]) return 'sparse';
 		const n = nt(c.site.x / 260 + 50, c.site.y / 260 + 50);
+		const hs = height(c.site);
+		if (opts.terrain === 'mountains' && hs > ROCK) return 'rock';
+		// high ground is grazing and wood, not ploughland
+		if (hs > 0.38) return n > 0.52 ? 'wood' : 'meadow';
 		const near = dist(c.site, center) < R * 2.1;
 		if (n > 0.6 && !c.verts.some((v) => roads.some((p) => p.includes(v)))) return 'wood';
 		if (near && n < 0.56) return 'farm';
@@ -575,6 +595,8 @@ export function generateTown(o: Partial<TownOptions> = {}): Town {
 		trees,
 		places: [],
 		labels: [],
+		relief: opts.terrain === 'flat' ? [] : contours(height, W, 10, opts.terrain === 'hills' ? [0.1, 0.2, 0.3, 0.4, 0.5, 0.6] : [0.08, 0.16, 0.24, 0.32, 0.4, 0.48, 0.56, ROCK, 0.7, 0.78, 0.86, 0.94]),
+		rockLevel: opts.terrain === 'mountains' ? ROCK : null,
 	};
 	town.places = placePlaces(town, r.names, spec.places);
 	const keep = wards.find((w) => w.kind === 'keep');

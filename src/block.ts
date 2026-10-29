@@ -1,9 +1,9 @@
 // The `mapsmith` code block: `key: value` lines in, town options out, and back again when a button
 // changes one of them. Kept apart from main.ts so it can be tested without Obsidian.
 
-import { DEFAULTS, LANDS, SIDES, SIZES, WATERS, type Land, type Side, type Size, type Town, type TownOptions, type Water, type Place } from './town';
+import { DEFAULTS, LANDS, SIDES, SIZES, TERRAINS, WATERS, type Land, type Side, type Terrain, type Size, type Town, type TownOptions, type Water, type Place } from './town';
 
-export const KEYS = ['seed', 'size', 'water', 'side', 'walls', 'land', 'name'] as const;
+export const KEYS = ['seed', 'size', 'water', 'side', 'walls', 'land', 'terrain', 'name'] as const;
 export type Key = (typeof KEYS)[number];
 
 const ALIAS: Record<string, string> = {
@@ -22,6 +22,12 @@ const ALIAS: Record<string, string> = {
 	grass: 'green',
 	grassy: 'green',
 	paper: 'parchment',
+	hill: 'hills',
+	hilly: 'hills',
+	mountain: 'mountains',
+	mountainous: 'mountains',
+	plain: 'flat',
+	plains: 'flat',
 };
 
 const clean = (v: string) => {
@@ -69,6 +75,11 @@ export function parseBlock(src: string): Parsed {
 			const v = clean(val);
 			if ((LANDS as string[]).includes(v)) opts.land = v as Land;
 			else problems.push(`land can be ${LANDS.join(' or ')}`);
+		} else if (key === 'terrain') {
+			const v = clean(val);
+			if ((TERRAINS as string[]).includes(v)) opts.terrain = v as Terrain;
+			else if (v === 'none') opts.terrain = 'flat';
+			else problems.push(`terrain can be ${TERRAINS.join(', ')}`);
 		} else problems.push(`no key "${key}"; try ${KEYS.join(', ')}`);
 	}
 	return { opts, problems };

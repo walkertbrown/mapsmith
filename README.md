@@ -27,9 +27,10 @@ name: Saltmarch
 | `side` | Where the sea or lake lies: `north`, `south`, `east` or `west` |
 | `walls` | `yes` or `no`. Hamlets and villages never have walls. |
 | `land` | `parchment` (the default) or `green`, for how the country around the town is painted |
+| `terrain` | `flat` (the default), `hills` or `mountains`. Roads wind round high ground, rivers cut valleys through it, and mountains go to bare rock at the top. |
 | `name` | The town's name. Leave it out and the seed picks one. |
 
-The bar above the map changes size, water, walls and land, and **New town** rolls a new seed. Each of them rewrites the block, so what you see is always what the note says. The command **Insert a town map** adds a block with a fresh seed.
+The bar above the map changes size, water, terrain, walls and land, and **New town** rolls a new seed. Each of them rewrites the block, so what you see is always what the note says. The command **Insert a town map** adds a block with a fresh seed.
 
 The map is drawn in the colours of your theme, light or dark.
 

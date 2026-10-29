@@ -23,6 +23,10 @@ export interface Palette {
 	waterInk: string;
 	wave: string;
 	bank: string; // the sand or mud along the water
+	hill: string; // each band of high ground is washed a little more with this
+	contour: string;
+	rock: string;
+	sun: string; // the slopes that face the light
 	road: string;
 	roadInk: string;
 	roof: string[];
@@ -55,6 +59,10 @@ export const LIGHT: Palette = {
 	waterInk: '#466a70',
 	wave: '#b9d2d3',
 	bank: '#e6d39f',
+	hill: '#6b5a3a',
+	contour: '#a3916a',
+	rock: '#cdc6b6',
+	sun: '#fffaf0',
 	road: '#f2ead6',
 	roadInk: '#b3a37f',
 	roof: ['#b9805f', '#a9745a', '#c08d68', '#9c6f5c', '#b48468'],
@@ -76,6 +84,8 @@ export const LIGHT: Palette = {
 		meadow: '#c0cc8e',
 		field: ['#d2d69e', '#c4ce8c', '#dad8a3', '#bccb88'],
 		hedge: '#97a866',
+		hill: '#3f4d22',
+		contour: '#7d8b52',
 		garden: '#d3d8a7',
 		tree: '#80985f',
 		treeDark: '#4b6136',
@@ -96,6 +106,10 @@ export const DARK: Palette = {
 	waterInk: '#6f9599',
 	wave: '#2f4d50',
 	bank: '#4a4330',
+	hill: '#e8dcc0',
+	contour: '#6f6650',
+	rock: '#57544c',
+	sun: '#a89e86',
 	road: '#4a4538',
 	roadInk: '#6d6450',
 	roof: ['#8a5e47', '#7d5745', '#94694f', '#735446', '#86624e'],
@@ -117,6 +131,7 @@ export const DARK: Palette = {
 		meadow: '#29342a',
 		field: ['#2e3826', '#2a3423', '#333b29', '#283222'],
 		hedge: '#3f4c2e',
+		contour: '#56613f',
 		garden: '#2c3527',
 		tree: '#465a37',
 		treeDark: '#1f2a19',
@@ -143,6 +158,8 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 	const r = makeRng(`${t.opts.seed}:paint`);
 	const u = (m: number) => m / t.mpu;
 	const kids: Node[] = [];
+	// ids for paths the map refers back to, different for each map in a note
+	const id = `ms${hashSeed(`${t.opts.seed}:${t.opts.size}:${t.opts.water}:${t.opts.terrain}:${t.name}`).toString(36)}`;
 
 	kids.push(el('rect', { x: 0, y: 0, width: t.w, height: t.h, fill: P.land }));
 	const meadows = t.wards.filter((w) => w.kind === 'meadow' || w.kind === 'wood');
@@ -153,6 +170,36 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 			t.fields.map((x) => el('path', { d: d(x.poly), fill: P.field[x.tone % P.field.length] as string })),
 		),
 	);
+
+	// high ground: each band above a contour washes the land a little darker, and above the tree line it's rock.
+	// Each band nudged toward the light and away from it, less the band itself, lights the slopes facing
+	// north-west and shades the ones facing south-east.
+	if (t.relief.length) {
+		const defs: Node[] = [];
+		const lit: Node[] = [];
+		const bands: Node[] = [];
+		const whole = { x: 0, y: 0, width: t.w, height: t.h };
+		t.relief.forEach((b, i) => {
+			const band = `${id}-h${i}`, href = `#${band}`;
+			defs.push(el('path', { id: band, d: b.rings.map((x) => d(x)).join('') }));
+			for (const [side, dx, dy, fill, op] of [['s', 2.5, 3.5, P.ink, 0.16], ['l', -2, -2.5, P.sun, 0.3]] as const) {
+				defs.push(
+					el('mask', { id: `${band}${side}` }, [
+						el('rect', { ...whole, fill: 'black' }),
+						el('use', { href, transform: `translate(${dx} ${dy})`, fill: 'white' }),
+						el('use', { href, fill: 'black' }),
+					]),
+				);
+				lit.push(el('rect', { ...whole, fill, opacity: op, mask: `url(#${band}${side})` }));
+			}
+			const rock = t.rockLevel !== null && b.level >= t.rockLevel;
+			bands.push(el('use', { href, fill: rock ? P.rock : P.hill, 'fill-opacity': rock ? 0.6 : 0.08 }));
+		});
+		kids.push(el('defs', {}, defs));
+		kids.push(g({ 'fill-rule': 'evenodd' }, bands));
+		kids.push(g({}, lit));
+		kids.push(g({ fill: 'none', stroke: P.contour, 'stroke-width': 0.9, 'stroke-linejoin': 'round' }, t.relief.map((_, i) => el('use', { href: `#${id}-h${i}` }))));
+	}
 
 	// water
 	if (t.water.length) {
@@ -246,7 +293,6 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 
 	// street and quarter names, under the numbers, with a halo of land so they read over roofs
 	if (o.names !== false && t.labels.length) {
-		const id = `ms${hashSeed(`${t.opts.seed}:${t.opts.size}:${t.opts.water}:${t.name}`).toString(36)}`;
 		// streets and quarters sit in the town, so their halo is paving; where the roads go is out in the country
 		const halo = { stroke: P.street, 'stroke-width': 3, 'stroke-linejoin': 'round', 'paint-order': 'stroke' };
 		const out = { ...halo, stroke: P.land };

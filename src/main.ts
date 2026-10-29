@@ -1,10 +1,11 @@
 import { Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, Plugin, TFile, normalizePath } from 'obsidian';
 import { editBlock, newSeed, noteName, parseBlock, placeNote, setKey, type Key } from './block';
 import { DARK, LIGHT, renderTown, toDom } from './render';
-import { SIZES, WATERS, generateTown, type Place, type Town } from './town';
+import { SIZES, TERRAINS, WATERS, generateTown, type Place, type Town } from './town';
 
 const SIZE_TEXT: Record<string, string> = { hamlet: 'Hamlet', village: 'Village', town: 'Town', 'large-town': 'Large town', city: 'City' };
 const WATER_TEXT: Record<string, string> = { none: 'No water', river: 'River', coast: 'Coast', estuary: 'River mouth', lake: 'Lake' };
+const TERRAIN_TEXT: Record<string, string> = { flat: 'Flat', hills: 'Hills', mountains: 'Mountains' };
 
 export default class MapsmithPlugin extends Plugin {
 	onload() {
@@ -91,6 +92,10 @@ class TownMap extends MarkdownRenderChild {
 		for (const w of WATERS) water.createEl('option', { text: WATER_TEXT[w], value: w });
 		water.value = opts.water;
 		water.addEventListener('change', () => this.set('water', water.value));
+		const terrain = bar.createEl('select', { cls: 'dropdown' });
+		for (const k of TERRAINS) terrain.createEl('option', { text: TERRAIN_TEXT[k], value: k });
+		terrain.value = opts.terrain;
+		terrain.addEventListener('change', () => this.set('terrain', terrain.value));
 		const walls = bar.createEl('button', { text: opts.walls ? 'Walls' : 'No walls', cls: 'mapsmith-toggle' });
 		walls.toggleClass('is-on', opts.walls);
 		walls.addEventListener('click', () => this.set('walls', opts.walls ? 'no' : 'yes'));

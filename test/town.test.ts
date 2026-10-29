@@ -104,4 +104,33 @@ describe('generateTown', () => {
 		expect(pa).not.toContain('#cbd49c');
 		expect(toString(renderTown(b, { palette: DARK }))).toContain('#262f21');
 	});
+
+	it('raises hills and mountains around the town but keeps the town on flat ground', () => {
+		const flat = generateTown({ seed: 'stone', size: 'village', water: 'none' });
+		expect(flat.relief).toHaveLength(0);
+		for (const terrain of ['hills', 'mountains'] as const)
+			for (const seed of ['stone', 'alpha', 'kilo']) {
+				const t = generateTown({ seed, size: 'town', water: 'river', terrain });
+				expect(t.relief.length, `${seed} ${terrain}`).toBeGreaterThan(1);
+				for (const b of t.relief) for (const ring of b.rings) for (const q of ring) expect(Number.isFinite(q.x) && Number.isFinite(q.y)).toBe(true);
+				// no ring reaches the market square
+				const low = t.relief[0] as { rings: { x: number; y: number }[][] };
+				for (const ring of low.rings) expect(ring.every((q) => Math.hypot(q.x - t.center.x, q.y - t.center.y) > 60)).toBe(true);
+				expect(t.roads.length).toBeGreaterThan(0);
+			}
+		const m = generateTown({ seed: 'stone', size: 'village', water: 'none', terrain: 'mountains' });
+		expect(m.rockLevel).not.toBeNull();
+		expect(m.wards.some((w) => w.kind === 'rock')).toBe(true);
+		expect(m.buildings.every((b) => m.wards[b.ward]?.kind !== 'rock')).toBe(true);
+		const svg = toString(renderTown(m));
+		expect(svg).toContain('<mask');
+		expect(svg).not.toMatch(/NaN|undefined/);
+	});
+
+	it('leaves a flat map as it was', () => {
+		const a = generateTown({ seed: 'kilo', size: 'town', water: 'river' });
+		const b = generateTown({ seed: 'kilo', size: 'town', water: 'river', terrain: 'flat' });
+		expect(b.buildings).toEqual(a.buildings);
+		expect(toString(renderTown(b))).not.toContain('<mask');
+	});
 });
