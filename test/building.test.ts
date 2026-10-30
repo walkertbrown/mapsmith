@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BUILDING_KINDS, GROUND, UPPER, buildingFor, generateBuilding } from '../src/building';
+import { BUILDING_KINDS, CELLAR, GROUND, UPPER, buildingFor, generateBuilding } from '../src/building';
 import { parseBlock, placeNote } from '../src/block';
 import { boarding, explore } from '../src/explore';
 import { cellAt, keyEntries, stampCells, type Deck } from '../src/ship/model';
@@ -22,17 +22,24 @@ describe('the inside of a building', () => {
 			it(`${kind} ${seed}: every room has a way in, and fittings sit on the floor`, () => {
 				const g = generateBuilding(kind, seed);
 				expect(g, 'the same seed draws the same building').toEqual(generateBuilding(kind, seed));
-				expect(g.decks.length).toBe(['temple', 'bathhouse', 'theatre'].includes(kind) ? 1 : 2);
+				expect(g.decks.length).toBe(['temple', 'bathhouse', 'theatre'].includes(kind) ? 1 : ['inn', 'tavern'].includes(kind) ? 3 : 2);
 				const nums = g.decks.flatMap((d) => keyEntries(d).map((e) => e.num));
 				expect(nums).toEqual(nums.map((_, i) => i + 1));
 				g.decks.forEach((d, i) => {
 					expect(reached(d, i ? boarding(d) : [])).toBe(keyEntries(d).length);
 					for (const st of d.stamps) for (const [x, y] of stampCells(st)) expect(cellAt(d, x, y)).toBeGreaterThan(0);
-					expect(d.doors.some((k) => k.kind === 'window')).toBe(true);
+					expect(d.doors.some((k) => k.kind === (d.name === CELLAR ? 'bars' : 'window'))).toBe(true);
 				});
-				if (g.decks.length === 2) {
+				if (g.decks.length > 1) {
 					const [a, b] = g.decks.map((d) => d.stamps.find((st) => st.kind === 'stairs' && st.link)!);
 					expect([a!.x, a!.y, a!.link, b!.link]).toEqual([b!.x, b!.y, UPPER, GROUND]);
+				}
+				if (g.decks.length === 3) {
+					// down a ladder from the store room into the cellar, on the same square
+					const [a, c] = [g.decks[0]!, g.decks[2]!].map((d) => d.stamps.find((st) => st.kind === 'ladder' && st.link)!);
+					expect([a!.x, a!.y, a!.link, c!.link]).toEqual([c!.x, c!.y, CELLAR, GROUND]);
+					expect(g.decks[0]!.key[cellAt(g.decks[0]!, a!.x, a!.y)]!.name).toMatch(/Store room|Pantry/);
+					expect(keyEntries(g.decks[2]!).map((e) => e.name).sort()).toEqual(['Cellar', 'Old cellar', 'Wine cellar']);
 				}
 				expect(g.brief).toMatch(/Hook: /);
 			});

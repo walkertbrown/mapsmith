@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BUILDING_KINDS, generateBuilding } from '../src/building';
+import { BUILDING_KINDS, CELLAR, generateBuilding } from '../src/building';
 import { generateDungeon } from '../src/dungeon';
 import { toString } from '../src/render';
 import { generate } from '../src/ship/generate';
@@ -45,7 +45,7 @@ describe('Universal VTT', () => {
 				const count = (k: string) => d.doors.filter((x) => x.kind === k).length;
 				expect(u.portals).toHaveLength(d.doors.length - count('arch'));
 				expect(u.portals.filter((p) => !p.closed)).toHaveLength(count('window') + count('bars'));
-				expect(count('window')).toBeGreaterThan(0);
+				expect(count(d.name === CELLAR ? 'bars' : 'window')).toBeGreaterThan(0);
 				expect(u.line_of_sight.length).toBeGreaterThan(4);
 				const { x: w, y: h } = u.resolution.map_size;
 				for (const p of [...u.line_of_sight.flat(), ...u.portals.flatMap((p) => p.bounds)]) {

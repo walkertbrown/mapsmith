@@ -340,7 +340,7 @@ class TownMap extends MarkdownRenderChild {
 			floors.value = String(at + 1);
 			floors.addEventListener('change', () => this.set('deck', floors.value));
 		}
-		// upstairs, you come in at the top of the stairs
+		// upstairs, you come in at the top of the stairs, and in the cellar at the foot of the ladder
 		const solo = this.soloPlay(bar, deck, o.explore, o.found, at ? boarding(deck) : [], (num) => onEntering(o.seed, 'building', 'lair', num));
 		const again = bar.createEl('button', { text: 'New building', cls: 'mod-cta' });
 		again.addEventListener('click', () => this.set('seed', newSeed()));

@@ -103,7 +103,7 @@ Press **Explore** to play a dungeon on your own. Only the way in can be seen (ro
 
 ## Inside buildings
 
-Add `map: building` for the floor plan of one building, numbered and furnished room by room: an inn's common room, kitchen, store and snug, with guest rooms upstairs and who is staying in them; a tavern; a shop with its workroom; a smithy open to the street; a temple with its nave, sanctuary and a stair down to the crypt; a guildhall with its strongroom; a bathhouse; a library; the watch's barracks and cells; a livery stable with a hayloft; a playhouse; or a mill. Most have an upper floor, reached by the stairs in the front room's corner. A place's note from a town map has this block in it already, with the place's name and keeper.
+Add `map: building` for the floor plan of one building, numbered and furnished room by room: an inn's common room, kitchen, store and snug, with guest rooms upstairs and who is staying in them, and a cellar under it; a tavern, with a cellar too; a shop with its workroom; a smithy open to the street; a temple with its nave, sanctuary and a stair down to the crypt; a guildhall with its strongroom; a bathhouse; a library; the watch's barracks and cells; a livery stable with a hayloft; a playhouse; or a mill. Most have an upper floor, reached by the stairs in the front room's corner. An inn's or a tavern's cellar is down a ladder from the store room: casks, a wine cellar with a grating to the street, and an old cellar with something hidden in it. A place's note from a town map has this block in it already, with the place's name and keeper.
 
 ![The upper floor of an inn: a landing with guest rooms either side, the room under the eaves picked, and who is staying in it](docs/building.png)
 
@@ -118,10 +118,10 @@ kind: inn
 | Key | What it does |
 | --- | --- |
 | `kind` | `inn`, `tavern`, `shop`, `smithy`, `temple`, `guild`, `bathhouse`, `library`, `barracks`, `stables`, `theatre` or `mill` |
-| `deck` | the floor to show, `1` for the ground floor and `2` for upstairs |
+| `deck` | the floor to show, `1` for the ground floor, `2` for upstairs and `3` for an inn's or a tavern's cellar |
 | `name` | the building's name; without it one is made up |
 | `keeper` | who keeps it; without it one is made up |
-| `explore`, `found` | solo play, as in a dungeon. Upstairs, you come in at the top of the stairs |
+| `explore`, `found` | solo play, as in a dungeon. Upstairs, you come in at the top of the stairs, and in a cellar at the foot of the ladder |
 
 Above the plan is what the place is known for, and a hook. One room in each building hides something. **New building** rolls a new seed, and the command **Insert the inside of a building** adds a block.
 

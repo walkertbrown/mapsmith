@@ -1,6 +1,7 @@
 // The inside of a town's buildings, on the ship's grid like a dungeon, so the plan, the key, solo play and the
 // tabletop file all carry over. A building is a box cut into bands of rooms, from the street at the front (south)
-// to the back; upstairs is a landing with rooms either side, reached by stairs in the front room's corner.
+// to the back; upstairs is a landing with rooms either side, reached by stairs in the front room's corner. Under an
+// inn or a tavern is a cellar, down a ladder from the store room.
 // All words are Mapsmith's own.
 
 import { fitter, type Fit } from './dungeon';
@@ -21,7 +22,7 @@ const FOR: Partial<Record<PlaceKind, BuildingKind>> = {
 export const buildingFor = (k: PlaceKind): BuildingKind | undefined => FOR[k];
 
 const O = 8; // where the building starts on the grid
-export const GROUND = 'Ground floor', UPPER = 'Upper floor';
+export const GROUND = 'Ground floor', UPPER = 'Upper floor', CELLAR = 'Cellar';
 
 interface Role {
 	names: [string, ...string[]];
@@ -312,6 +313,21 @@ const ROLES: Record<string, Role> = {
 		say: ['A bed that shakes when the wheel turns, and the miller sleeps through it.', 'Flour on the blankets, and a strongbox under the bed.'],
 		fit: (f) => { f.mid('bed', f.head); f.scatter('chest', 1); },
 	},
+	casks: {
+		names: ['Cellar'], tint: 6,
+		say: ['Casks racked along the walls, chalked with the day each was tapped.', 'Cool and dark, and the smell of beer soaked into the stone.', 'Casks, a pump, and the chute the drays roll new casks down.'],
+		fit: (f) => { f.along('barrel', f.head); f.scatter('barrel', 3); },
+	},
+	wine: {
+		names: ['Wine cellar'], tint: 6,
+		say: ['Racks of bottles, a few of them worth more than the house.', 'Wine in racks to the roof, and a ledger hung on a nail that nobody keeps up.', 'The good wine at the back, behind the cheap.'],
+		fit: (f) => { f.along('rack', f.head); f.scatter('barrel', 1); },
+	},
+	old: {
+		names: ['Old cellar'], tint: 7,
+		say: ['Older stone than the house above, and an arch in the far wall bricked up badly.', 'Damp, and colder than it should be. Candles gutter down here.', 'Broken casks, and a rusted grate in the floor with water running under it.'],
+		fit: (f) => { f.scatter('rubble', 2); f.scatter('chest', 1); },
+	},
 };
 
 interface Plan {
@@ -320,6 +336,8 @@ interface Plan {
 	bands: { d: [number, number]; rooms: string[] }[];
 	/** upstairs: the rooms it must have, and what fills the rest; none for one floor */
 	upper?: { must: string[]; fill: string };
+	/** a cellar under it, down from the store room */
+	cellar?: boolean;
 	/** how the brief names whoever keeps it */
 	by?: string;
 	known: string[];
@@ -329,13 +347,13 @@ interface Plan {
 const PLANS: Record<BuildingKind, Plan> = {
 	inn: {
 		w: [12, 15], bands: [{ d: [5, 6], rooms: ['common'] }, { d: [4, 5], rooms: ['kitchen', 'store', 'snug'] }],
-		upper: { must: ['keeper', 'best'], fill: 'guest' },
+		upper: { must: ['keeper', 'best'], fill: 'guest' }, cellar: true,
 		known: ['Travellers stop here because it is the last good bed before the road gets hard.', 'It has stood here longer than the town wall, and it has the crooked floors to prove it.', 'The beer is thin and the beds are clean, which is the right way round for an inn.'],
 		hooks: ['A guest left in the night without paying and without their luggage, and the luggage is ticking.', 'Somebody is asking every new guest the same question, and paying well for the answer.', 'The keeper wants the cellar cleared of whatever has been drinking the wine.', 'Two guests booked the same room under the same name.'],
 	},
 	tavern: {
 		w: [10, 12], bands: [{ d: [5, 6], rooms: ['taproom'] }, { d: [4, 4], rooms: ['kitchen', 'store', 'snug'] }],
-		upper: { must: ['keeper'], fill: 'bedroom' },
+		upper: { must: ['keeper'], fill: 'bedroom' }, cellar: true,
 		known: ['Locals drink here, and strangers get looked at.', 'The cheapest ale in town and the loudest arguments.', 'Half the deals in town are made at its back table.'],
 		hooks: ['A dice game in the snug has gone on for three days and the stakes keep climbing.', 'The keeper pays someone off every week, and the someone is getting greedy.', 'A brawl last night left a man dead, and nobody saw a thing.', 'A song about the council is going round, and the council wants the singer.'],
 	},
@@ -457,6 +475,7 @@ export function generateBuilding(kind: BuildingKind, seed: string, name?: string
 	let num = 1;
 	const hidden = shuffle(r, [...HIDDEN]), guests = shuffle(r, [...GUESTS]);
 	const secretAt = int(r, 1, 3); // which room, counting from the second, has something hidden
+	let down: [number, number] | null = null; // where the ladder goes down to the cellar
 
 	const finish = (d: Deck, boxes: Box[], doors: { x: number; y: number; side: Side; kind: DoorKind }[], windows: [number, number, Side][]) => {
 		for (const b of boxes) {
@@ -489,7 +508,7 @@ export function generateBuilding(kind: BuildingKind, seed: string, name?: string
 				fitter(d, b, r, taken, near, 'N').scatter('stairs', 1);
 				notes.push('Stairs go down to the crypt under the temple.');
 			}
-			if (num === secretAt + 1 && hidden.length) notes.push(`Hidden: ${hidden.pop()}`);
+			if ((num === secretAt + 1 || b.role === 'old') && hidden.length) notes.push(`Hidden: ${hidden.pop()}`);
 			d.key[b.id] = { num: num++, name: nm, notes: notes.join('\n') };
 		}
 		// windows last, so a bed can stand under one
@@ -529,6 +548,11 @@ export function generateBuilding(kind: BuildingKind, seed: string, name?: string
 			bottom = top;
 		});
 		if (P.upper) d.stamps.push({ x: x0, y: hy, kind: 'stairs', rot: 0, link: UPPER });
+		const store = boxes.find((b) => b.role === 'store');
+		if (P.cellar && store) {
+			down = [store.x + store.w - 1, store.y];
+			d.stamps.push({ x: down[0], y: down[1], kind: 'ladder', rot: 0, link: CELLAR });
+		}
 		finish(d, boxes, doors, windows);
 	}
 
@@ -557,6 +581,27 @@ export function generateBuilding(kind: BuildingKind, seed: string, name?: string
 			}
 		}
 		finish(d, boxes, doors, windows);
+	}
+
+	// the cellar: casks under the back of the house where the ladder comes down, and two rooms under the street end,
+	// one with a grating up to the street and one older than the house
+	if (down) {
+		const d = newDeck(CELLAR);
+		d.stamps.push({ x: down[0], y: down[1], kind: 'ladder', rot: 0, link: GROUND });
+		const back = depth[depth.length - 1] as number, top = y0 + back;
+		const boxes: Box[] = [{ id: FIRST_ROOM, x: x0, y: y0, w: W, h: back, role: 'casks' }];
+		const doors: Parameters<typeof finish>[2] = [];
+		let x = x0;
+		shuffle(r, ['wine', 'old']).forEach((role, i) => {
+			const w = i ? W - (x - x0) : int(r, 4, W - 4);
+			const b: Box = { id: FIRST_ROOM + boxes.length, x, y: top, w, h: front + 1 - top, role };
+			boxes.push(b);
+			const mid = Math.max(b.x + (b.w >> 1), x0 + 1);
+			doors.push({ x: mid, y: top, side: 'N', kind: 'door' });
+			if (role === 'wine') doors.push({ x: mid, y: front, side: 'S', kind: 'bars' });
+			x += w;
+		});
+		finish(d, boxes, doors, []);
 	}
 
 	const brief = [`${pick(r, P.known)} ${P.by ?? 'It is kept by'} ${who}.`, `Hook: ${pick(r, P.hooks)}`].join('\n\n');
