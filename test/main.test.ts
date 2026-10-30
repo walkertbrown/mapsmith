@@ -106,3 +106,26 @@ describe('saving for a virtual tabletop', () => {
 		expect(await plugin.checkKey()).toBe("Mapsmith Pro isn't sold yet.");
 	});
 });
+
+describe('solo play in a dungeon', () => {
+	const CRYPT = '# Crypt\n\n```mapsmith\nmap: dungeon\nseed: a\nsize: dungeon\nkind: crypt\n```\n';
+	it('starts in room 1, goes through a door, and shows what was inside', async () => {
+		const { el, flush, content, render } = setup(CRYPT);
+		Array.from(el.querySelectorAll('button')).find((b) => b.textContent === 'Explore')!.click();
+		await flush();
+		expect(content()).toContain('explore: 1\n');
+		render();
+		const shown = () => Array.from(el.querySelectorAll<HTMLElement>('.mapsmith-key li')).filter((li) => li.style.display !== 'none');
+		expect(shown().map((li) => li.getAttribute('value'))).toEqual(['1']);
+		const way = el.querySelector('.mapsmith-way')!;
+		const num = way.getAttribute('data-enter')!;
+		way.querySelector('circle')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		await flush();
+		expect(content()).toContain(`explore: 1, ${num}\n`);
+		render();
+		expect(shown().map((li) => li.getAttribute('value'))).toEqual(['1', num]);
+		expect(el.querySelector('.mapsmith-card-n')!.textContent).toBe(num);
+		expect(el.querySelector('.mapsmith-card')!.textContent).toMatch(/Inside[A-Z]/);
+		expect(el.querySelector('.mapsmith-hint')!.textContent).toMatch(/^2 of \d+ rooms explored/);
+	});
+});

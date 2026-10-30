@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseBlock, setKey } from '../src/block';
 import { generateDungeon } from '../src/dungeon';
-import { explore, parseExplored } from '../src/explore';
+import { explore, onEntering, parseExplored } from '../src/explore';
 import { keyEntries } from '../src/ship/model';
 import { renderDeck } from '../src/ship/svg';
 import { toString } from '../src/render';
@@ -56,5 +56,17 @@ describe('solo play', () => {
 		const body = setKey('map: dungeon\nseed: x\n', 'explore', '1, 3');
 		expect(parseBlock(body).dungeon.explore).toEqual([1, 3]);
 		expect(parseBlock(body).problems).toEqual([]);
+	});
+
+	it('rolls the same thing every time for a room, from lists of its own for each kind', () => {
+		expect(onEntering('a', 'crypt', 'dungeon', 3)).toBe(onEntering('a', 'crypt', 'dungeon', 3));
+		const seen = (kind: 'crypt' | 'keep') => new Set(Array.from({ length: 200 }, (_, i) => onEntering(`s${i}`, kind, 'deep', 2)));
+		const crypt = seen('crypt'), keep = seen('keep');
+		expect(crypt.size).toBeGreaterThan(20);
+		expect(keep.size).toBeGreaterThan(20);
+		for (const t of [...crypt, ...keep]) expect(t).toMatch(/^[A-Z][^#]*\.$/);
+		// a deep dungeon's foes come two or more at a time
+		expect([...crypt].some((t) => /^(Two|Three|Four|Five|Six) /.test(t))).toBe(true);
+		expect([...crypt].some((t) => /^A skeleton climbs/.test(t))).toBe(false);
 	});
 });

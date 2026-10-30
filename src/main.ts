@@ -5,7 +5,7 @@ import { DARK, LIGHT, renderTown, toDom, toString } from './render';
 import { hashSeed } from './rng';
 import { generate, type GenResult } from './ship/generate';
 import { keyEntries, type Deck, type RoomInfo } from './ship/model';
-import { explore, type Explored } from './explore';
+import { explore, onEntering, type Explored } from './explore';
 import { DUNGEON_DARK, DUNGEON_LIGHT, SHIP_DARK, SHIP_LIGHT, renderDeck, type ShipPalette } from './ship/svg';
 import { SIZES, TERRAINS, WATERS, generateTown, type Place, type Town } from './town';
 import { gridPixels, svgToPng, uvttData } from './vtt';
@@ -275,6 +275,11 @@ class TownMap extends MarkdownRenderChild {
 		const id = `ms${hashSeed(`${o.seed}:${o.size}:${o.kind}`).toString(36)}`;
 		// a keep stands in the open, so only a crypt gets rock round it
 		const fog = o.explore ? explore(deck, o.explore) : undefined;
+		// what happened in each room you walked into, on its card and in its note
+		if (o.explore) for (const r of keyEntries(deck)) if (r.num !== 1 && o.explore.includes(r.num)) {
+			const k = deck.key[r.id];
+			if (k) k.notes = `${k.notes}\nInside: ${onEntering(o.seed, o.kind, o.size, r.num)}`;
+		}
 		const enter = (num: number) => this.set('explore', [...(o.explore ?? []), num].sort((a, b) => a - b).join(', '));
 		this.drawPlan(root, s, deck, 'What happened here', o.kind === 'crypt' ? pal : { ...pal, rock: undefined }, id, 'dungeon', fog && { fog, enter });
 	}
@@ -303,6 +308,8 @@ class TownMap extends MarkdownRenderChild {
 		const items = rooms.map((r) => {
 			const li = key.createEl('li');
 			li.createSpan({ cls: 'mapsmith-key-name', text: r.name });
+			// the list's own count would skip the dark rooms, so each line carries its room's number
+			li.setAttr('value', String(r.num));
 			if (solo && !solo.fog.rooms.has(r.id)) li.hide();
 			return li;
 		});
@@ -339,7 +346,7 @@ class TownMap extends MarkdownRenderChild {
 		head.createSpan({ cls: 'mapsmith-card-name', text: r.name });
 		for (const line of r.notes.split('\n').filter(Boolean)) {
 			// "Hazard: ..." and the like get the same tag as a town's hook
-			const m = /^(Hazard|Salvage|Treasure|Way in|Hook): (.*)$/.exec(line);
+			const m = /^(Hazard|Salvage|Treasure|Way in|Hook|Inside): (.*)$/.exec(line);
 			const div = card.createDiv({ cls: m ? 'mapsmith-card-hook' : '' });
 			if (m) {
 				div.createSpan({ cls: 'mapsmith-card-tag', text: m[1] as string });

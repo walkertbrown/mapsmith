@@ -84,7 +84,7 @@ Each room has a line on what's there, and some have a hazard or treasure; the ro
 
 ### Exploring alone
 
-Press **Explore** to play a dungeon on your own. Only the way in, room 1, can be seen, with the corridors and open ground that lead out of it. Every other room stays dark. A question mark sits at each door into the dark; click it to go in, and that room, its number and its card appear. Secret doors stay hidden in this mode too. What you've explored is written into the block, so the note remembers how far you got. Press **Explore** again to see the whole map.
+Press **Explore** to play a dungeon on your own. Only the way in, room 1, can be seen, with the corridors and open ground that lead out of it. Every other room stays dark. A question mark sits at each door into the dark; click it to go in, and that room, its number and its card appear. The card also says what you found inside: nothing, a sign of what's ahead, a trap, or something waiting for you, with the numbers growing in a deeper dungeon. Crypts and keeps have lists of their own, and a room always rolls the same thing, so it's still there when you come back. Secret doors stay hidden in this mode too. What you've explored is written into the block, so the note remembers how far you got. Press **Explore** again to see the whole map.
 
 ## Pro
 

@@ -226,7 +226,7 @@ export function roomNote(ship: string, deck: string | undefined, r: RoomInfo, ma
 		...r.notes
 			.split('\n')
 			.filter(Boolean)
-			.flatMap((l) => [l.replace(/^(Hazard|Salvage|Treasure|Way in|Hook): /, '**$1:** '), '']),
+			.flatMap((l) => [l.replace(/^(Hazard|Salvage|Treasure|Way in|Hook|Inside): /, '**$1:** '), '']),
 		'## Notes',
 		'',
 		'',
