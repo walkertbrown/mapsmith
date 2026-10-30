@@ -1,6 +1,7 @@
 import { App, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, Plugin, PluginSettingTab, SettingDefinitionItem, TFile, normalizePath, requestUrl } from 'obsidian';
+import { BUILDING_KINDS, buildingFor, generateBuilding } from './building';
 import { DUNGEON_KINDS, DUNGEON_SIZES, generateDungeon } from './dungeon';
-import { SHIP_SIZES, editBlock, newSeed, noteName, parseBlock, placeNote, roomNote, setKey, type DungeonOptions, type Key, type ShipOptions } from './block';
+import { SHIP_SIZES, editBlock, newSeed, noteName, parseBlock, placeNote, roomNote, setKey, type BuildingOptions, type DungeonOptions, type Key, type ShipOptions } from './block';
 import { DARK, LIGHT, renderTown, toDom, toString, type Node as SvgNode } from './render';
 import { hashSeed } from './rng';
 import { generate, type GenResult } from './ship/generate';
@@ -15,6 +16,7 @@ const WATER_TEXT: Record<string, string> = { none: 'No water', river: 'River', c
 const TERRAIN_TEXT: Record<string, string> = { flat: 'Flat', hills: 'Hills', mountains: 'Mountains' };
 const SHIP_TEXT: Record<string, string> = { shuttle: 'Shuttle', corvette: 'Corvette', freighter: 'Freighter', station: 'Station' };
 const DUNGEON_TEXT: Record<string, string> = { lair: 'Lair', dungeon: 'Dungeon', deep: 'Deep', crypt: 'Crypt', keep: 'Keep' };
+const BUILDING_TEXT: Record<string, string> = { inn: 'Inn', tavern: 'Tavern', shop: 'Shop', smithy: 'Smithy', temple: 'Temple' };
 
 /** Where a VTT key is checked, and mailed again. The only places the plugin goes online. */
 export const SERVER = 'https://bulkhead.bananafest-destiny.com';
@@ -47,6 +49,11 @@ export default class MapsmithPlugin extends Plugin {
 			id: 'insert-dungeon',
 			name: 'Insert a dungeon map',
 			editorCallback: (editor: Editor) => editor.replaceSelection(`\`\`\`mapsmith\nmap: dungeon\nseed: ${newSeed()}\nsize: dungeon\nkind: crypt\n\`\`\`\n`),
+		});
+		this.addCommand({
+			id: 'insert-building',
+			name: 'Insert the inside of a building',
+			editorCallback: (editor: Editor) => editor.replaceSelection(`\`\`\`mapsmith\nmap: building\nseed: ${newSeed()}\nkind: inn\n\`\`\`\n`),
 		});
 		this.settings = Object.assign({ key: '', vtt: false }, (await this.loadData()) as Partial<Settings> | null);
 		this.addSettingTab(new MapsmithSettingTab(this.app, this));
@@ -150,13 +157,17 @@ class TownMap extends MarkdownRenderChild {
 		const root = this.containerEl;
 		root.empty();
 		root.addClass('mapsmith');
-		const { map, opts, ship, dungeon, problems } = parseBlock(this.src);
+		const { map, opts, ship, dungeon, building, problems } = parseBlock(this.src);
 		if (map === 'ship') {
 			this.drawShip(root, ship, problems);
 			return;
 		}
 		if (map === 'dungeon') {
 			this.drawDungeon(root, dungeon, problems);
+			return;
+		}
+		if (map === 'building') {
+			this.drawBuilding(root, building, problems);
 			return;
 		}
 		const t = generateTown(opts);
@@ -285,6 +296,33 @@ class TownMap extends MarkdownRenderChild {
 		this.drawPlan(root, s, deck, 'What happened here', o.kind === 'crypt' ? pal : { ...pal, rock: undefined }, id, 'dungeon', solo);
 	}
 
+	drawBuilding(root: HTMLElement, o: BuildingOptions, problems: string[]) {
+		const s = generateBuilding(o.kind, o.seed, o.name, o.keeper);
+		const at = Math.min(o.floor, s.decks.length) - 1;
+		const deck = s.decks[at];
+		if (!deck) return;
+		const bar = root.createDiv({ cls: 'mapsmith-bar' });
+		const kind = bar.createEl('select', { cls: 'dropdown' });
+		for (const v of BUILDING_KINDS) kind.createEl('option', { text: BUILDING_TEXT[v] ?? v, value: v });
+		kind.value = o.kind;
+		kind.addEventListener('change', () => this.set('kind', kind.value));
+		if (s.decks.length > 1) {
+			const floors = bar.createEl('select', { cls: 'dropdown' });
+			s.decks.forEach((d, i) => floors.createEl('option', { text: d.name, value: String(i + 1) }));
+			floors.value = String(at + 1);
+			floors.addEventListener('change', () => this.set('deck', floors.value));
+		}
+		// upstairs, you come in at the top of the stairs
+		const solo = this.soloPlay(bar, deck, o.explore, o.found, at ? boarding(deck) : [], (num) => onEntering(o.seed, 'building', 'lair', num));
+		const again = bar.createEl('button', { text: 'New building', cls: 'mod-cta' });
+		again.addEventListener('click', () => this.set('seed', newSeed()));
+		if (problems.length) root.createDiv({ cls: 'mapsmith-problem', text: problems.join('. ') + '.' });
+
+		const dark = document.body.hasClass('theme-dark');
+		const id = `ms${hashSeed(`${o.seed}:${o.kind}:${at}`).toString(36)}`;
+		this.drawPlan(root, s, deck, 'About the place', { ...(dark ? DUNGEON_DARK : DUNGEON_LIGHT), rock: undefined }, id, 'building', solo);
+	}
+
 	/** The Explore button. In solo play, also what has been seen, and what was inside each room walked into,
 	 *  on its card and in its note, and a search for secret doors. */
 	soloPlay(bar: HTMLElement, deck: Deck, explored: number[] | null, found: number[], from: [number, number][], inside: (num: number) => string) {
@@ -313,8 +351,8 @@ class TownMap extends MarkdownRenderChild {
 		return { fog, search, enter: (num: number) => this.set('explore', [...explored, num].sort((a, b) => a - b).join(', ')) };
 	}
 
-	// The part a ship and a dungeon share: the name, the story, the map, the card and the key.
-	drawPlan(root: HTMLElement, s: GenResult, deck: Deck, summary: string, palette: ShipPalette, id: string, what: 'ship' | 'dungeon', solo?: { fog: Explored; enter: (num: number) => void; search: (num: number) => void }) {
+	// The part a ship, a dungeon and a building share: the name, the story, the map, the card and the key.
+	drawPlan(root: HTMLElement, s: GenResult, deck: Deck, summary: string, palette: ShipPalette, id: string, what: 'ship' | 'dungeon' | 'building', solo?: { fog: Explored; enter: (num: number) => void; search: (num: number) => void }) {
 		root.createDiv({ cls: 'mapsmith-title', text: s.decks.length > 1 ? `${s.name}, ${deck.name.toLowerCase()}` : s.name });
 		const rooms = keyEntries(deck);
 		if (solo) {
@@ -367,7 +405,7 @@ class TownMap extends MarkdownRenderChild {
 		});
 	}
 
-	drawRoom(card: HTMLElement, r: RoomInfo | undefined, ship: string, deck: string | undefined, what: 'ship' | 'dungeon' = 'ship', search?: () => void) {
+	drawRoom(card: HTMLElement, r: RoomInfo | undefined, ship: string, deck: string | undefined, what: 'ship' | 'dungeon' | 'building' = 'ship', search?: () => void) {
 		card.empty();
 		if (!r) {
 			card.createDiv({ cls: 'mapsmith-hint', text: 'Click a number to see what is in that room.' });
@@ -378,7 +416,7 @@ class TownMap extends MarkdownRenderChild {
 		head.createSpan({ cls: 'mapsmith-card-name', text: r.name });
 		for (const line of r.notes.split('\n').filter(Boolean)) {
 			// "Hazard: ..." and the like get the same tag as a town's hook
-			const m = /^(Hazard|Salvage|Treasure|Way in|Hook|Inside): (.*)$/.exec(line);
+			const m = /^(Hazard|Salvage|Treasure|Way in|Hook|Inside|Hidden): (.*)$/.exec(line);
 			const div = card.createDiv({ cls: m ? 'mapsmith-card-hook' : '' });
 			if (m) {
 				div.createSpan({ cls: 'mapsmith-card-tag', text: m[1] as string });
@@ -405,6 +443,7 @@ class TownMap extends MarkdownRenderChild {
 		const hook = card.createDiv({ cls: 'mapsmith-card-hook' });
 		hook.createSpan({ cls: 'mapsmith-card-tag', text: 'Hook' });
 		hook.appendText(p.hook);
+		if (buildingFor(p.kind)) card.createDiv({ cls: 'mapsmith-card-sub', text: 'Its note has a plan of the inside.' });
 		const open = card.createEl('button', { text: 'Open its note' });
 		open.addEventListener('click', () => void this.plugin.openNote(t.name, noteName(p), () => placeNote(t, p, this.ctx.sourcePath), this.ctx.sourcePath));
 	}

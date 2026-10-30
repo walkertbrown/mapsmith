@@ -86,7 +86,7 @@ interface Kind {
 }
 
 const last = (who: string) => who.split(' ').slice(-1)[0] as string;
-const sign = (r: Rng) => `The ${pick(r, ADJ)} ${pick(r, NOUN)}`;
+export const sign = (r: Rng) => `The ${pick(r, ADJ)} ${pick(r, NOUN)}`;
 
 const KINDS: Record<PlaceKind, Kind> = {
 	market: {

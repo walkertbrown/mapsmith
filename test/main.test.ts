@@ -164,3 +164,20 @@ describe('solo play in a dungeon', () => {
 		expect(el.querySelector('svg')!.innerHTML).toContain('>S<');
 	});
 });
+
+describe('the inside of a building', () => {
+	it('draws the ground floor, goes upstairs, and tells a town place that its note has the inside', async () => {
+		const { el, flush, content } = setup('# Inn\n\n```mapsmith\nmap: building\nseed: salt\nkind: inn\nname: The Lame Eel\n```\n');
+		expect(el.querySelector('.mapsmith-title')!.textContent).toBe('The Lame Eel, ground floor');
+		expect(el.querySelectorAll('.mapsmith-key li')[0]!.textContent).toMatch(/^Common room/);
+		const floors = Array.from(el.querySelectorAll('select'))[1]!;
+		floors.value = '2';
+		floors.dispatchEvent(new Event('change'));
+		await flush();
+		expect(content()).toContain('deck: 2\n');
+		const town = setup(NOTE).el;
+		const i = Array.from(town.querySelectorAll('.mapsmith-key-label')).findIndex((s) => s.textContent === 'Inn');
+		town.querySelectorAll<HTMLElement>('.mapsmith-key li')[i]!.click();
+		expect(town.querySelector('.mapsmith-card')!.textContent).toContain('Its note has a plan of the inside.');
+	});
+});

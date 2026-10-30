@@ -106,8 +106,16 @@ export function parseExplored(v: string): number[] | null {
 
 // What you find when you walk in. A foe is [one of them, several of them]; # is how many.
 type Foe = [string, string];
-type Kind = DungeonKind | Mood;
+type Kind = DungeonKind | Mood | 'building';
 const FOES: Record<Kind, Foe[]> = {
+	building: [
+		['A drunk wants to know what you are looking at', '# drunks want to know what you are looking at'],
+		['A thief is going through the drawers', '# thieves are going through the drawers'],
+		['A servant drops a tray at the sight of you', '# servants stop gossiping at the sight of you'],
+		['A watchman asks your business here', '# of the watch ask your business here'],
+		['A hired blade is waiting for someone, and it might be you', '# hired blades are waiting for someone, and it might be you'],
+		['A dog guards the room and does not know you', '# dogs guard the room and do not know you'],
+	],
 	crypt: [
 		['A skeleton climbs out of its niche', '# skeletons climb out of the niches'],
 		['A ghoul crouches over an open coffin', '# ghouls crouch over an open coffin'],
@@ -144,6 +152,14 @@ const FOES: Record<Kind, Foe[]> = {
 	],
 };
 const SIGNS: Record<Kind, string[]> = {
+	building: [
+		'A letter half burnt in the grate.',
+		'Wet footprints that stop at the wall.',
+		'Voices through the floor, then a door closing.',
+		'A purse under the table, its strings cut.',
+		'A chair knocked over, and nobody has set it straight.',
+		'Someone has slept here who should not have.',
+	],
 	crypt: [
 		'Fresh footprints in the dust lead further in.',
 		'A candle on the floor is still warm.',
@@ -178,6 +194,13 @@ const SIGNS: Record<Kind, string[]> = {
 	],
 };
 const TRAPS: Record<Kind, string[]> = {
+	building: [
+		'A floorboard creaks loud enough for the whole house.',
+		'A dog wakes and will not stop barking.',
+		'The door locks behind you, and the key is on the other side.',
+		'A lamp tips over and the rushes catch.',
+		'A step gives way under you.',
+	],
 	crypt: [
 		'A flagstone sinks, and darts fly from the walls.',
 		'The floor gives way into a pit of old bones.',
@@ -208,6 +231,7 @@ const TRAPS: Record<Kind, string[]> = {
 	],
 };
 const QUIET: Record<Kind, string[]> = {
+	building: ['Empty. The fire has burnt low.', 'Quiet, apart from the house settling.', 'Nobody here. Someone will be back soon.'],
 	crypt: ['Empty and quiet. Take a breath.', 'Quiet. Whatever was here has gone.', 'Nothing stirs. You could rest here a while.'],
 	keep: ['Empty and quiet. Take a breath.', 'Quiet. Whatever was here has gone.', 'Nothing stirs. You could rest here a while.'],
 	intact: ['Nobody here. The lights hum.', 'Empty, and tidy. Someone will be back.', 'Quiet, apart from the air.'],

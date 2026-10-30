@@ -23,7 +23,7 @@ const PLAN: Record<DungeonSize, { rooms: [number, number]; cols: number; rows: n
 interface Room { id: number; sx: number; sy: number; x: number; y: number; w: number; h: number; role: Role }
 
 // Puts fittings in one room, in its own coordinates, never on a doorstep or on another fitting.
-interface Fit {
+export interface Fit {
 	r: Rng;
 	w: number;
 	h: number;
@@ -506,7 +506,7 @@ function bailey(d: Deck, rooms: Room[], first: number) {
 	d.nextRoom = first + 5;
 }
 
-function fitter(d: Deck, rm: Room, r: Rng, taken: Set<number>, near: Set<number>, head: Side): Fit {
+export function fitter(d: Deck, rm: Pick<Room, 'id' | 'x' | 'y' | 'w' | 'h'>, r: Rng, taken: Set<number>, near: Set<number>, head: Side): Fit {
 	const ok = ([x, y]: [number, number]) => cellAt(d, x, y) === rm.id && !taken.has(idx(x, y)) && !near.has(idx(x, y));
 	const put = (k: StampKind, x: number, y: number, rot: 0 | 1 | 2 | 3 = 0) => {
 		const st = { x: rm.x + x, y: rm.y + y, kind: k, rot };
