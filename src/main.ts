@@ -459,7 +459,7 @@ class MapsmithSettingTab extends PluginSettingTab {
 		return [
 			{
 				name: 'Pro key',
-				desc: 'The address of your itch download page for Mapsmith Pro, or the key at the end of it. It turns on Save for virtual tabletop under each ship and dungeon. Check asks this plugin\'s server once, and saving stays on after that, offline too. The key is kept in this vault\'s plugin folder.',
+				desc: 'The address of your itch download page for Mapsmith Pro, or the key at the end of it. It turns on Save for virtual tabletop under every map: towns, ships, dungeons and the inside of buildings. Check asks this plugin\'s server once, and saving stays on after that, offline too. The key is kept in this vault\'s plugin folder.',
 				render: (setting) => {
 					const said = setting.descEl.createDiv({ cls: 'mapsmith-said' });
 					setting

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BUILDING_KINDS, generateBuilding } from '../src/building';
 import { generateDungeon } from '../src/dungeon';
 import { toString } from '../src/render';
 import { generate } from '../src/ship/generate';
@@ -35,6 +36,26 @@ describe('Universal VTT', () => {
 			}
 		}
 		expect(secrets).toBeGreaterThan(0);
+	});
+
+	it('saves every floor of every building, with its doors, windows and bars', () => {
+		for (const kind of BUILDING_KINDS) {
+			for (const d of generateBuilding(kind, 'saltmarch').decks) {
+				const u = uvttData(d, 70);
+				const count = (k: string) => d.doors.filter((x) => x.kind === k).length;
+				expect(u.portals).toHaveLength(d.doors.length - count('arch'));
+				expect(u.portals.filter((p) => !p.closed)).toHaveLength(count('window') + count('bars'));
+				expect(count('window')).toBeGreaterThan(0);
+				expect(u.line_of_sight.length).toBeGreaterThan(4);
+				const { x: w, y: h } = u.resolution.map_size;
+				for (const p of [...u.line_of_sight.flat(), ...u.portals.flatMap((p) => p.bounds)]) {
+					expect(p.x).toBeGreaterThanOrEqual(0);
+					expect(p.y).toBeGreaterThanOrEqual(0);
+					expect(p.x).toBeLessThanOrEqual(w);
+					expect(p.y).toBeLessThanOrEqual(h);
+				}
+			}
+		}
 	});
 
 	it('keeps a ship deck\'s airlocks as doors and its lights', () => {
