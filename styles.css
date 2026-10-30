@@ -134,14 +134,14 @@
 	margin: 8px 0 0;
 	padding-left: 1.8em;
 	display: grid;
-	/* two columns when there is room for 14em each, one when there isn't */
-	grid-template-columns: repeat(auto-fit, minmax(max(14em, calc(50% - 1.1em)), 1fr));
-	column-gap: 2.2em;
+	/* two columns when there is room for 14em each, one when there isn't; the space between is padding on each item */
+	grid-template-columns: repeat(auto-fit, minmax(max(14em, 50%), 1fr));
 	font-size: var(--font-ui-small);
 }
 
 .mapsmith-key li {
 	cursor: pointer;
+	padding-right: 2.2em;
 }
 
 .mapsmith-key li:hover,

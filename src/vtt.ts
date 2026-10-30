@@ -81,7 +81,7 @@ export function townUvttData(t: Town, pixelsPerGrid: number): UVTT {
 		portals.push({ position: at(mean([a, e])), bounds: [at(a), at(e)], rotation: r3(Math.atan2(d.y, d.x)), closed: true, freestanding: false });
 	};
 	for (const w of t.walls) {
-		const loop = w.length > 3 && dist(w[0] as P, w.at(-1) as P) < 1e-6;
+		const loop = w.length > 3 && dist(w[0] as P, w[w.length - 1] as P) < 1e-6;
 		// a wall is cut where a gate stands in it, and the gate is a door across the gap
 		const gaps = new Map<number, P[]>();
 		for (const g of t.gates) {
