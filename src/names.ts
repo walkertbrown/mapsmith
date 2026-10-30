@@ -98,7 +98,13 @@ const KINDS: Record<PlaceKind, Kind> = {
 	},
 	temple: {
 		label: 'Temple',
-		name: (r) => `${pick(r, ['St', 'Our Lady of', 'the Chapel of', 'the House of'])} ${pick(r, ['the Tides', 'the Harvest', 'Mercy', 'the Lamp', 'the Long Road', 'Saint Odo', 'the Open Hand', 'Ashes'])}`,
+		name: (r) => {
+			// a saint's church is St Hild's; the rest are given to something
+			const to = pick(r, ['St', 'Our Lady of', 'the Chapel of', 'the House of']);
+			return to === 'St'
+				? `St ${pick(r, ['Odo', 'Hild', 'Brannoc', 'Mildred', 'Aldhelm', 'Edwy', 'Wulfstan', 'Cuthbert'])}'s`
+				: `${to} ${pick(r, ['the Tides', 'the Harvest', 'Mercy', 'the Lamp', 'the Long Road', 'the Hearth', 'the Open Hand', 'Ashes'])}`;
+		},
 		detail: ['Bells cast from melted swords, rung on the hour.', 'A crypt the priests say is empty.', 'Coloured glass, half of it replaced with plain.', 'Pilgrims sleep on the steps when the inns are full.'],
 		hook: ['The relic in the side chapel has been swapped for a fake, and only the sexton has noticed.', 'A priest is hearing confessions after dark, and some of them are not from the living.', 'The bells rang at midnight, and nobody was in the tower.', 'An heir is buried here, and someone wants proof the coffin is not empty.'],
 	},

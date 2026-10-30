@@ -236,6 +236,8 @@ export function placeNote(t: Town, p: Place, mapNote: string): string {
 	const block = inside
 		? ['map: building', `kind: ${inside}`, `seed: ${t.opts.seed}-${p.n}`, `name: ${p.name}`, ...(p.keeper ? [`keeper: ${p.keeper}`] : [])]
 		: p.kind === 'keep' ? ['map: dungeon', 'kind: keep', 'size: lair', `seed: ${t.opts.seed}-${p.n}`, `name: ${p.name}`] : null;
+	// and a town's temple has the dead under it
+	const below = p.kind === 'temple' ? ['map: dungeon', 'kind: crypt', 'size: lair', `seed: ${t.opts.seed}-${p.n}-below`, `name: The crypt under ${p.name.replace(/^The /, 'the ')}`] : null;
 	return [
 		'---',
 		`town: "${t.name}"`,
@@ -255,6 +257,7 @@ export function placeNote(t: Town, p: Place, mapNote: string): string {
 		p.hook,
 		'',
 		...(block ? ['## Inside', '', '```mapsmith', ...block, '```', ''] : []),
+		...(below ? ['## Below', '', '```mapsmith', ...below, '```', ''] : []),
 		'## Notes',
 		'',
 		'',

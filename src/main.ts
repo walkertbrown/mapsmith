@@ -476,7 +476,7 @@ class TownMap extends MarkdownRenderChild {
 			on.createSpan({ cls: 'mapsmith-card-tag', text: 'On the way' });
 			on.appendText(way);
 		}
-		if (buildingFor(p.kind) || p.kind === 'keep') card.createDiv({ cls: 'mapsmith-card-sub', text: 'Its note has a plan of the inside.' });
+		if (buildingFor(p.kind) || p.kind === 'keep') card.createDiv({ cls: 'mapsmith-card-sub', text: p.kind === 'temple' ? 'Its note has a plan of the inside, and of the crypt below.' : 'Its note has a plan of the inside.' });
 		const open = card.createEl('button', { text: 'Open its note' });
 		open.addEventListener('click', () => void this.plugin.openNote(t.name, noteName(p), () => placeNote(t, p, this.ctx.sourcePath), this.ctx.sourcePath));
 	}

@@ -69,4 +69,14 @@ describe('the inside of a building', () => {
 		const block = /```mapsmith\n([^`]*)```/.exec(placeNote(t, keep, 'Towns/Map.md'))![1]!;
 		expect(parseBlock(block)).toMatchObject({ map: 'dungeon', problems: [], dungeon: { kind: 'keep', size: 'lair', name: keep.name } });
 	});
+
+	it("puts a crypt under a town's temple, and nowhere else", () => {
+		const t = ['a', 'b', 'c', 'd', 'e'].map((seed) => generateTown({ seed, size: 'town' })).find((x) => x.places.some((p) => p.kind === 'temple'))!;
+		const temple = t.places.find((p) => p.kind === 'temple')!;
+		const blocks = [...placeNote(t, temple, 'Towns/Map.md').matchAll(/```mapsmith\n([^`]*)```/g)].map((m) => parseBlock(m[1]!));
+		expect(blocks.map((b) => b.map)).toEqual(['building', 'dungeon']);
+		expect(blocks[1]).toMatchObject({ problems: [], dungeon: { kind: 'crypt', size: 'lair' } });
+		expect(blocks[1]!.dungeon.name).toMatch(/^The crypt under [a-zA-Z]/);
+		for (const p of t.places.filter((x) => x.kind !== 'temple')) expect(placeNote(t, p, 'Towns/Map.md')).not.toContain('## Below');
+	});
 });
