@@ -252,7 +252,7 @@ class TownMap extends MarkdownRenderChild {
 		const mood = bar.createEl('button', { text: wreck ? 'Derelict' : 'Intact', cls: 'mapsmith-toggle' });
 		mood.toggleClass('is-on', wreck);
 		mood.addEventListener('click', () => this.set('mood', wreck ? 'intact' : 'derelict'));
-		const solo = this.soloPlay(bar, deck, o.explore, boarding(deck), (num) => onEntering(o.seed, o.mood, o.size, num));
+		const solo = this.soloPlay(bar, deck, o.explore, o.found, boarding(deck), (num) => onEntering(o.seed, o.mood, o.size, num));
 		const again = bar.createEl('button', { text: 'New ship', cls: 'mod-cta' });
 		again.addEventListener('click', () => this.set('seed', newSeed()));
 		if (problems.length) root.createDiv({ cls: 'mapsmith-problem', text: problems.join('. ') + '.' });
@@ -273,7 +273,7 @@ class TownMap extends MarkdownRenderChild {
 			sel.value = o[k];
 			sel.addEventListener('change', () => this.set(k, sel.value));
 		}
-		const solo = this.soloPlay(bar, deck, o.explore, [], (num) => onEntering(o.seed, o.kind, o.size, num));
+		const solo = this.soloPlay(bar, deck, o.explore, o.found, [], (num) => onEntering(o.seed, o.kind, o.size, num));
 		const again = bar.createEl('button', { text: 'New dungeon', cls: 'mod-cta' });
 		again.addEventListener('click', () => this.set('seed', newSeed()));
 		if (problems.length) root.createDiv({ cls: 'mapsmith-problem', text: problems.join('. ') + '.' });
@@ -286,25 +286,35 @@ class TownMap extends MarkdownRenderChild {
 	}
 
 	/** The Explore button. In solo play, also what has been seen, and what was inside each room walked into,
-	 *  on its card and in its note. */
-	soloPlay(bar: HTMLElement, deck: Deck, explored: number[] | null, from: [number, number][], inside: (num: number) => string) {
+	 *  on its card and in its note, and a search for secret doors. */
+	soloPlay(bar: HTMLElement, deck: Deck, explored: number[] | null, found: number[], from: [number, number][], inside: (num: number) => string) {
 		const on = explored !== null;
 		const play = bar.createEl('button', { text: 'Explore', cls: 'mapsmith-toggle' });
 		play.toggleClass('is-on', on);
 		play.setAttr('aria-label', on ? 'Show the whole map' : 'Play it alone: every room stays dark until you go in');
 		play.addEventListener('click', () => this.set('explore', on ? 'off' : 'on'));
 		if (!explored) return undefined;
-		const fog = explore(deck, explored, from);
+		const fog = explore(deck, explored, from, found);
 		const start = explore(deck, [], from).rooms;
 		for (const r of keyEntries(deck)) {
 			const k = deck.key[r.id];
 			if (k && fog.rooms.has(r.id) && !start.has(r.id)) k.notes = `${k.notes}\nInside: ${inside(r.num)}`;
 		}
-		return { fog, enter: (num: number) => this.set('explore', [...explored, num].sort((a, b) => a - b).join(', ')) };
+		// a 5 or 6 on a d6 finds whatever is hidden in the room's walls; a room with nothing hidden says so
+		const search = (num: number) => {
+			const roll = 1 + Math.floor(Math.random() * 6);
+			const more = [...found, num].sort((a, b) => a - b);
+			if (roll < 5) new Notice(`You rolled ${roll}. You search the walls and find nothing.`);
+			else if (explore(deck, explored, from, more).found.size > fog.found.size) {
+				new Notice(`You rolled ${roll}. A stone gives under your hand: a secret door!`);
+				this.set('found', more.join(', '));
+			} else new Notice(`You rolled ${roll} and tried every stone. There is nothing hidden here.`);
+		};
+		return { fog, search, enter: (num: number) => this.set('explore', [...explored, num].sort((a, b) => a - b).join(', ')) };
 	}
 
 	// The part a ship and a dungeon share: the name, the story, the map, the card and the key.
-	drawPlan(root: HTMLElement, s: GenResult, deck: Deck, summary: string, palette: ShipPalette, id: string, what: 'ship' | 'dungeon', solo?: { fog: Explored; enter: (num: number) => void }) {
+	drawPlan(root: HTMLElement, s: GenResult, deck: Deck, summary: string, palette: ShipPalette, id: string, what: 'ship' | 'dungeon', solo?: { fog: Explored; enter: (num: number) => void; search: (num: number) => void }) {
 		root.createDiv({ cls: 'mapsmith-title', text: s.decks.length > 1 ? `${s.name}, ${deck.name.toLowerCase()}` : s.name });
 		const rooms = keyEntries(deck);
 		if (solo) {
@@ -313,7 +323,7 @@ class TownMap extends MarkdownRenderChild {
 				this.picked = rooms.findIndex((r) => r.num === came.num);
 				this.plugin.entered = null;
 			}
-			const left = solo.fog.ways.length ? ' Click a question mark to go through that door.' : solo.fog.rooms.size < rooms.length ? ' No open door leads on. The rest is behind secret doors.' : '';
+			const left = solo.fog.ways.length ? ' Click a question mark to go through that door.' : solo.fog.rooms.size < rooms.length ? ' No open door leads on. The rest is behind secret doors: open a room and search it.' : '';
 			root.createDiv({ cls: 'mapsmith-hint', text: `${solo.fog.rooms.size} of ${rooms.length} rooms explored.${left}` });
 		}
 		const story = root.createEl('details', { cls: 'mapsmith-story' });
@@ -351,10 +361,13 @@ class TownMap extends MarkdownRenderChild {
 				.catch((e: unknown) => new Notice(`Could not save the VTT file: ${e instanceof Error ? e.message : String(e)}`))
 				.finally(() => (vtt.disabled = false));
 		});
-		this.pickable(svg, items, (i) => this.drawRoom(card, i < 0 ? undefined : rooms[i], ship, deckName, what));
+		this.pickable(svg, items, (i) => {
+			const r = i < 0 ? undefined : rooms[i];
+			this.drawRoom(card, r, ship, deckName, what, solo && r && solo.fog.rooms.has(r.id) && deck.doors.some((k) => k.kind === 'secret') ? () => solo.search(r.num) : undefined);
+		});
 	}
 
-	drawRoom(card: HTMLElement, r: RoomInfo | undefined, ship: string, deck: string | undefined, what: 'ship' | 'dungeon' = 'ship') {
+	drawRoom(card: HTMLElement, r: RoomInfo | undefined, ship: string, deck: string | undefined, what: 'ship' | 'dungeon' = 'ship', search?: () => void) {
 		card.empty();
 		if (!r) {
 			card.createDiv({ cls: 'mapsmith-hint', text: 'Click a number to see what is in that room.' });
@@ -373,6 +386,7 @@ class TownMap extends MarkdownRenderChild {
 			} else div.setText(line);
 		}
 		const open = card.createEl('button', { text: 'Open its note' });
+		if (search) card.createEl('button', { text: 'Search for secret doors' }).addEventListener('click', search);
 		const folder = deck ? `${ship}/${deck}` : ship;
 		open.addEventListener('click', () => void this.plugin.openNote(folder, noteName({ name: `${r.num} ${r.name}`, n: r.num }), () => roomNote(ship, deck, r, this.ctx.sourcePath, what), this.ctx.sourcePath));
 	}

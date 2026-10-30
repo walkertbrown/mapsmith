@@ -4,7 +4,7 @@ import { generateDungeon } from '../src/dungeon';
 import { boarding, explore, onEntering, parseExplored } from '../src/explore';
 import { generate } from '../src/ship/generate';
 import { hashSeed } from '../src/rng';
-import { keyEntries } from '../src/ship/model';
+import { cellAt, keyEntries, sideDelta } from '../src/ship/model';
 import { renderDeck } from '../src/ship/svg';
 import { toString } from '../src/render';
 
@@ -39,6 +39,27 @@ describe('solo play', () => {
 				const all = explore(d, been);
 				expect(all.rooms.size).toBe(keyEntries(d).length);
 			}
+	});
+
+	it('keeps a secret door as wall until a search in a room beside it finds it', () => {
+		let checked = 0;
+		for (const seed of ['one', 'two', 'three', 'four', 'five', 'six', 'a', 'b']) {
+			const d = deckOf(seed);
+			const nums = keyEntries(d).map((r) => r.num);
+			const i = d.doors.findIndex((k) => k.kind === 'secret');
+			if (i < 0) continue;
+			checked++;
+			const all = explore(d, nums);
+			expect(all.found.size).toBe(0);
+			expect(toString(renderDeck(d, { id: 't', fog: all }))).not.toContain('>S<');
+			const k = d.doors[i]!, [dx, dy] = sideDelta(k.side);
+			const beside = keyEntries(d).filter((r) => [cellAt(d, k.x, k.y), cellAt(d, k.x + dx, k.y + dy)].includes(r.id)).map((r) => r.num);
+			if (!beside.length) continue;
+			const searched = explore(d, nums, [], beside.slice(0, 1));
+			expect(searched.found.has(i)).toBe(true);
+			expect(toString(renderDeck(d, { id: 't', fog: searched }))).toContain('>S<');
+		}
+		expect(checked).toBeGreaterThan(0);
 	});
 
 	it('draws dark over what is not seen, a mark at each way in, and no number on a dark room', () => {

@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { App, Notice, ctx, installDomHelpers, requestUrl } from './obsidian-shim';
 import MapsmithPlugin from '../src/main';
+import { generateDungeon } from '../src/dungeon';
+import { cellAt, keyEntries, sideDelta } from '../src/ship/model';
 
 beforeAll(() => installDomHelpers());
 
@@ -132,5 +134,33 @@ describe('solo play in a dungeon', () => {
 		expect(el.querySelector('.mapsmith-card-n')!.textContent).toBe(num);
 		expect(el.querySelector('.mapsmith-card')!.textContent).toMatch(/Inside[A-Z]/);
 		expect(el.querySelector('.mapsmith-hint')!.textContent).toMatch(/^2 of \d+ rooms explored/);
+	});
+
+	it('finds a secret door with a good roll on a search, and writes it into the block', async () => {
+		const seed = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].find((x) => generateDungeon('dungeon', 'crypt', x).decks[0]!.doors.some((k) => k.kind === 'secret'))!;
+		const d = generateDungeon('dungeon', 'crypt', seed).decks[0]!;
+		const k = d.doors.find((x) => x.kind === 'secret')!, [dx, dy] = sideDelta(k.side);
+		const rooms = keyEntries(d);
+		const beside = rooms.find((r) => r.id === cellAt(d, k.x, k.y) || r.id === cellAt(d, k.x + dx, k.y + dy))!;
+		const all = rooms.map((r) => r.num).join(', ');
+		const { el, flush, content, render } = setup(`\`\`\`mapsmith\nmap: dungeon\nseed: ${seed}\nkind: crypt\nexplore: ${all}\n\`\`\`\n`);
+		const search = () => {
+			el.querySelector<HTMLElement>(`.mapsmith-key li[value="${beside.num}"]`)!.click();
+			Array.from(el.querySelectorAll('button')).find((b) => b.textContent === 'Search for secret doors')!.click();
+		};
+		expect(el.querySelector('svg')!.innerHTML).not.toContain('>S<');
+		const roll = vi.spyOn(Math, 'random').mockReturnValue(0.1);
+		search();
+		await flush();
+		expect(Notice.last).toMatch(/^You rolled 1\. .*find nothing/);
+		expect(content()).not.toContain('found:');
+		roll.mockReturnValue(0.99);
+		search();
+		await flush();
+		roll.mockRestore();
+		expect(Notice.last).toContain('a secret door');
+		expect(content()).toContain(`found: ${beside.num}\n`);
+		render();
+		expect(el.querySelector('svg')!.innerHTML).toContain('>S<');
 	});
 });

@@ -13,14 +13,16 @@ export interface Explored {
 	ways: { x: number; y: number; num: number }[];
 	/** the ids of the rooms that have been explored */
 	rooms: Set<number>;
+	/** the secret doors found, by their index in the deck's doors */
+	found: Set<number>;
 }
 
 /** What can be seen once the rooms numbered `nums` have been explored. The ways in (`from`, squares; room 1 when
- *  there are none) always have been. */
-export function explore(d: Deck, nums: number[], from: [number, number][] = []): Explored {
+ *  there are none) always have been. A search in the rooms numbered `searched` found their secret doors. */
+export function explore(d: Deck, nums: number[], from: [number, number][] = [], searched: number[] = []): Explored {
 	const b = bounds(d);
 	const seen = new Uint8Array(d.cells.length);
-	if (!b) return { seen, ways: [], rooms: new Set() };
+	if (!b) return { seen, ways: [], rooms: new Set(), found: new Set() };
 	const keyed = new Map(keyEntries(d).map((e) => [e.id, e.num]));
 	// every square belongs to a place: a keyed room by its id, anything else (corridors, a keep's yard
 	// and towers) by the first square of its run, so each length of corridor is one place
@@ -48,13 +50,19 @@ export function explore(d: Deck, nums: number[], from: [number, number][] = []):
 		}
 	// doors join places; a secret door is only wall until someone finds it, and a window lets no one through
 	const links = new Map<number, { to: number; x: number; y: number }[]>();
-	for (const k of d.doors) {
-		if (k.kind === 'secret' || k.kind === 'window') continue;
+	const found = new Set<number>();
+	const looked = new Set(searched);
+	d.doors.forEach((k, i) => {
+		if (k.kind === 'window') return;
 		const [dx, dy] = sideDelta(k.side);
 		const a = place[idx(k.x, k.y)] as number, z = cellAt(d, k.x + dx, k.y + dy) === VOID ? -1 : (place[idx(k.x + dx, k.y + dy)] as number);
-		if (a === -1 || z === -1 || a === z) continue;
+		if (a === -1 || z === -1 || a === z) return;
+		if (k.kind === 'secret') {
+			if (![a, z].some((p) => looked.has(keyed.get(p) ?? -1))) return;
+			found.add(i);
+		}
 		for (const [p, q, x, y] of [[a, z, k.x + dx, k.y + dy], [z, a, k.x, k.y]] as const) links.set(p, [...(links.get(p) ?? []), { to: q, x, y }]);
-	}
+	});
 	const been = new Set(nums);
 	const open = new Set<number>();
 	for (const [x, y] of from) if ((place[idx(x, y)] ?? -1) !== -1) open.add(place[idx(x, y)] as number);
@@ -77,7 +85,7 @@ export function explore(d: Deck, nums: number[], from: [number, number][] = []):
 			if (num !== undefined && !open.has(l.to) && !ways.some((w) => w.x === l.x && w.y === l.y)) ways.push({ x: l.x, y: l.y, num });
 		}
 	}
-	return { seen, ways, rooms: new Set([...open].filter((id) => keyed.has(id))) };
+	return { seen, ways, rooms: new Set([...open].filter((id) => keyed.has(id))), found };
 }
 
 /** Where you come aboard a ship's deck: inside its airlocks, or else at the ladders and lifts from the next deck. */

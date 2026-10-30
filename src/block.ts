@@ -7,7 +7,7 @@ import type { Mood, ShipSize } from './ship/generate';
 import type { RoomInfo } from './ship/model';
 import { DEFAULTS, LANDS, SIDES, SIZES, TERRAINS, WATERS, type Land, type Side, type Terrain, type Size, type Town, type TownOptions, type Water, type Place } from './town';
 
-export const KEYS = ['map', 'seed', 'size', 'water', 'side', 'walls', 'land', 'terrain', 'name', 'mood', 'deck', 'kind', 'explore'] as const;
+export const KEYS = ['map', 'seed', 'size', 'water', 'side', 'walls', 'land', 'terrain', 'name', 'mood', 'deck', 'kind', 'explore', 'found'] as const;
 export type Key = (typeof KEYS)[number];
 
 export const MAPS = ['town', 'ship', 'dungeon'] as const;
@@ -22,6 +22,7 @@ export interface ShipOptions {
 	deck: number; // counted from 1, as the deck list shows it
 	/** solo play, as a dungeon's */
 	explore: number[] | null;
+	found: number[];
 }
 
 export interface DungeonOptions {
@@ -30,6 +31,8 @@ export interface DungeonOptions {
 	kind: DungeonKind;
 	/** solo play: the numbers of the rooms explored, or null when the whole map is shown */
 	explore: number[] | null;
+	/** solo play: the rooms where a search found the secret doors */
+	found: number[];
 }
 
 const ALIAS: Record<string, string> = {
@@ -85,8 +88,8 @@ export interface Parsed {
 
 export function parseBlock(src: string): Parsed {
 	const opts: TownOptions = { ...DEFAULTS };
-	const ship: ShipOptions = { seed: DEFAULTS.seed, size: 'corvette', mood: 'intact', deck: 1, explore: null };
-	const dungeon: DungeonOptions = { seed: DEFAULTS.seed, size: 'dungeon', kind: 'crypt', explore: null };
+	const ship: ShipOptions = { seed: DEFAULTS.seed, size: 'corvette', mood: 'intact', deck: 1, explore: null, found: [] };
+	const dungeon: DungeonOptions = { seed: DEFAULTS.seed, size: 'dungeon', kind: 'crypt', explore: null, found: [] };
 	const problems: string[] = [];
 	let map: MapKind = 'town';
 	let size = ''; // a town's sizes and a ship's differ, so it waits until the map is known
@@ -115,6 +118,7 @@ export function parseBlock(src: string): Parsed {
 			if ((DUNGEON_KINDS as string[]).includes(v)) dungeon.kind = v as DungeonKind;
 			else problems.push(`kind can be ${DUNGEON_KINDS.join(' or ')}`);
 		} else if (key === 'explore') ship.explore = dungeon.explore = parseExplored(val);
+		else if (key === 'found') ship.found = dungeon.found = parseExplored(val) ?? [];
 		else if (key === 'deck') {
 			const n = Number(val);
 			if (Number.isInteger(n) && n >= 1) ship.deck = n;

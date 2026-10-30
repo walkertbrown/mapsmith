@@ -51,7 +51,7 @@ describe('ship blocks', () => {
 		const { map, ship, problems } = parseBlock('map: starship\nseed: Wren 7\nsize: Freighter\nmood: wreck\ndeck: 2\n');
 		expect(problems).toEqual([]);
 		expect(map).toBe('ship');
-		expect(ship).toEqual({ seed: 'Wren 7', size: 'freighter', mood: 'derelict', deck: 2, explore: null });
+		expect(ship).toEqual({ seed: 'Wren 7', size: 'freighter', mood: 'derelict', deck: 2, explore: null, found: [] });
 	});
 
 	it('says which sizes a ship can be, and leaves towns alone', () => {
@@ -75,7 +75,7 @@ describe('roomNote', () => {
 	it('reads a dungeon block', () => {
 		const p = parseBlock('map: dungeon\nseed: Wren 7\nsize: Deep\nkind: castle');
 		expect(p.map).toBe('dungeon');
-		expect(p.dungeon).toEqual({ seed: 'Wren 7', size: 'deep', kind: 'keep', explore: null });
+		expect(p.dungeon).toEqual({ seed: 'Wren 7', size: 'deep', kind: 'keep', explore: null, found: [] });
 		expect(p.problems).toEqual([]);
 		const bad = parseBlock('map: dungeon\nsize: city\nkind: swamp');
 		expect(bad.problems.join(' ')).toContain("a dungeon's size can be lair, dungeon, deep");

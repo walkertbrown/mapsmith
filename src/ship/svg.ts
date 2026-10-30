@@ -183,7 +183,8 @@ export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 		kids.push(g({ transform: `translate(${f(cx)} ${f(cy)}) rotate(${st.rot * 90}) translate(${f((-fw * S) / 2)} ${f((-fh * S) / 2)}) scale(${S})` }, s.kids));
 	}
 
-	for (const k of d.doors) kids.push(door(k, P, X, Y, o.players));
+	// in solo play a secret door is wall until a search finds it
+	d.doors.forEach((k, i) => kids.push(door(k, P, X, Y, o.players || (!!o.fog && !o.fog.found.has(i)))));
 
 	// room names
 	kids.push(
