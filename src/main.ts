@@ -1,14 +1,14 @@
 import { App, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, Plugin, PluginSettingTab, SettingDefinitionItem, TFile, normalizePath, requestUrl } from 'obsidian';
 import { DUNGEON_KINDS, DUNGEON_SIZES, generateDungeon } from './dungeon';
 import { SHIP_SIZES, editBlock, newSeed, noteName, parseBlock, placeNote, roomNote, setKey, type DungeonOptions, type Key, type ShipOptions } from './block';
-import { DARK, LIGHT, renderTown, toDom, toString } from './render';
+import { DARK, LIGHT, renderTown, toDom, toString, type Node as SvgNode } from './render';
 import { hashSeed } from './rng';
 import { generate, type GenResult } from './ship/generate';
 import { keyEntries, type Deck, type RoomInfo } from './ship/model';
 import { boarding, explore, onEntering, type Explored } from './explore';
 import { DUNGEON_DARK, DUNGEON_LIGHT, SHIP_DARK, SHIP_LIGHT, renderDeck, type ShipPalette } from './ship/svg';
 import { SIZES, TERRAINS, WATERS, generateTown, type Place, type Town } from './town';
-import { gridPixels, svgToPng, uvttData } from './vtt';
+import { gridPixels, svgToPng, townMetres, townUvttData, uvttData, type UVTT } from './vtt';
 
 const SIZE_TEXT: Record<string, string> = { hamlet: 'Hamlet', village: 'Village', town: 'Town', 'large-town': 'Large town', city: 'City' };
 const WATER_TEXT: Record<string, string> = { none: 'No water', river: 'River', coast: 'Coast', estuary: 'River mouth', lake: 'Lake' };
@@ -101,15 +101,14 @@ export default class MapsmithPlugin extends Plugin {
 	}
 
 	/** Writes a Universal VTT file next to the note: the players' map, its walls, doors and lights. */
-	async saveVtt(deck: Deck, palette: ShipPalette, name: string, sourcePath: string) {
+	/** Writes `data` with `svg` drawn in as its picture; the svg's viewBox must cover the whole of the map's squares. */
+	async saveVtt(data: UVTT, svg: SvgNode, name: string, sourcePath: string, more = '') {
 		if (!this.settings.vtt) {
 			new Notice('Saving for a virtual tabletop needs a key. Paste yours in Mapsmith\'s settings.');
 			return;
 		}
-		const data = uvttData(deck, 0);
 		const { x: w, y: h } = data.resolution.map_size;
 		const px = (data.resolution.pixels_per_grid = gridPixels(w, h));
-		const svg = renderDeck(deck, { palette, id: 'vtt', players: true });
 		svg.a.width = w * px;
 		svg.a.height = h * px;
 		data.image = await svgToPng(toString(svg), w * px, h * px);
@@ -118,7 +117,7 @@ export default class MapsmithPlugin extends Plugin {
 		const old = this.app.vault.getAbstractFileByPath(path);
 		if (old instanceof TFile) await this.app.vault.modify(old, JSON.stringify(data));
 		else await this.app.vault.create(path, JSON.stringify(data));
-		new Notice(`Saved ${path}. Roll20 imports it as it is; Foundry reads it with the Universal Battlemap Importer module.`);
+		new Notice(`Saved ${path}.${more} Roll20 imports it as it is; Foundry reads it with the Universal Battlemap Importer module.`);
 	}
 }
 
@@ -198,6 +197,18 @@ class TownMap extends MarkdownRenderChild {
 			li.createSpan({ cls: 'mapsmith-key-name', text: p.name });
 			li.createSpan({ cls: 'mapsmith-key-label', text: p.label });
 			return li;
+		});
+		const vtt = root.createDiv({ cls: 'mapsmith-tools' }).createEl('button', { text: 'Save for virtual tabletop' });
+		vtt.addEventListener('click', () => {
+			vtt.disabled = true;
+			// the players' map: no numbers, and the squares it is cut into run past the edge to a whole one
+			const data = townUvttData(t, 0), m = townMetres(t);
+			const pic = renderTown(t, { palette: LIGHT, labels: false });
+			pic.a.viewBox = `0 0 ${(data.resolution.map_size.x * m) / t.mpu} ${(data.resolution.map_size.y * m) / t.mpu}`;
+			this.plugin
+				.saveVtt(data, pic, t.name, this.ctx.sourcePath, ` One square is ${m} metres.`)
+				.catch((e: unknown) => new Notice(`Could not save the VTT file: ${e instanceof Error ? e.message : String(e)}`))
+				.finally(() => (vtt.disabled = false));
 		});
 		this.pickable(svg, items, (i) => this.drawCard(card, t, i < 0 ? undefined : t.places[i]));
 	}
@@ -336,7 +347,7 @@ class TownMap extends MarkdownRenderChild {
 		vtt.addEventListener('click', () => {
 			vtt.disabled = true;
 			this.plugin
-				.saveVtt(deck, palette, deckName ? `${ship} ${deckName}` : ship, this.ctx.sourcePath)
+				.saveVtt(uvttData(deck, 0), renderDeck(deck, { palette, id: 'vtt', players: true }), deckName ? `${ship} ${deckName}` : ship, this.ctx.sourcePath)
 				.catch((e: unknown) => new Notice(`Could not save the VTT file: ${e instanceof Error ? e.message : String(e)}`))
 				.finally(() => (vtt.disabled = false));
 		});

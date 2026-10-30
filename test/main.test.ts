@@ -92,6 +92,11 @@ describe('saving for a virtual tabletop', () => {
 		expect(Notice.last).toContain("Mapsmith's settings");
 	});
 
+	it('has the button under a town too', () => {
+		const { el } = setup(NOTE);
+		expect(Array.from(el.querySelectorAll('.mapsmith-tools button')).map((b) => b.textContent)).toEqual(['Save for virtual tabletop']);
+	});
+
 	it('turns saving on for a key the server knows, and off for one it does not', async () => {
 		const { plugin } = setup(DUNGEON);
 		plugin.settings.key = 'somekey';

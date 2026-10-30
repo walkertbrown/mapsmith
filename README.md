@@ -89,7 +89,7 @@ Press **Explore** to play a dungeon on your own. Only the way in can be seen (ro
 
 ## Pro
 
-Everything above is free. Mapsmith Pro is a one-time payment of $6 on itch, and it adds a **Save for virtual tabletop** button under every dungeon and ship. It writes a Universal VTT file (`.dd2vtt`) beside your note: the map as your players should see it, with no room numbers and secret doors drawn as plain wall, plus the walls, doors, windows and lights already placed. Roll20 imports it as it is, and Foundry reads it with the Universal Battlemap Importer module.
+Everything above is free. Mapsmith Pro is a one-time payment of $6 on itch, and it adds a **Save for virtual tabletop** button under every town, dungeon and ship. It writes a Universal VTT file (`.dd2vtt`) beside your note: the map as your players should see it, with no numbers and secret doors drawn as plain wall, plus the walls, doors, windows and lights already placed. In a town every building and the town wall are walls and the gates are doors, on a grid of five metres a square (ten on a large town or city). Roll20 imports it as it is, and Foundry reads it with the Universal Battlemap Importer module.
 
 After you buy, copy your download page's address. Paste it into Mapsmith's settings under **Pro key** and press **Check**. Pro stays on in that vault from then on. Lost it? Type the email you bought with under **Lost your key?**.
 

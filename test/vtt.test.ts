@@ -3,7 +3,8 @@ import { generateDungeon } from '../src/dungeon';
 import { toString } from '../src/render';
 import { generate } from '../src/ship/generate';
 import { renderDeck } from '../src/ship/svg';
-import { gridPixels, uvttData } from '../src/vtt';
+import { generateTown, SIZES } from '../src/town';
+import { gridPixels, townUvttData, uvttData } from '../src/vtt';
 
 describe('Universal VTT', () => {
 	it('gives every door but an arch a portal, and walls a secret door up', () => {
@@ -48,5 +49,29 @@ describe('Universal VTT', () => {
 	it('shrinks the squares on a big map so a phone can draw it', () => {
 		expect(gridPixels(40, 30)).toBe(70);
 		expect(gridPixels(100, 80) * 100 * gridPixels(100, 80) * 80).toBeLessThanOrEqual(16e6);
+	});
+
+	it('walls in every building of a town, with a door in each gate and into the keep', () => {
+		for (const size of SIZES) {
+			for (const seed of ['salt', 'wren']) {
+				const t = generateTown({ seed, size, walls: true });
+				const u = townUvttData(t, 0);
+				const { x: w, y: h } = u.resolution.map_size;
+				const px = gridPixels(w, h);
+				expect(w * px * h * px).toBeLessThanOrEqual(16.1e6);
+				expect(u.line_of_sight.length).toBeGreaterThanOrEqual(t.buildings.length);
+				const keeps = t.walls.length - (t.gates.length ? 1 : 0);
+				if (t.walls.length) expect(u.portals.length).toBeGreaterThanOrEqual(t.gates.length);
+				expect(u.portals.length).toBeLessThanOrEqual(t.gates.length + Math.max(0, keeps));
+				for (const p of [...u.line_of_sight.flat(), ...u.portals.flatMap((p) => p.bounds)]) {
+					expect(p.x).toBeGreaterThanOrEqual(0);
+					expect(p.y).toBeGreaterThanOrEqual(0);
+					expect(p.x).toBeLessThanOrEqual(w);
+					expect(p.y).toBeLessThanOrEqual(h);
+				}
+				// a gate is the road and a metre either side; a keep's door is up to four metres
+				for (const p of u.portals) expect(Math.hypot(p.bounds[1]!.x - p.bounds[0]!.x, p.bounds[1]!.y - p.bounds[0]!.y)).toBeGreaterThan(0.2);
+			}
+		}
 	});
 });

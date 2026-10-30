@@ -3,6 +3,8 @@
 // map_origin, y down; a wall is a polyline; a portal's bounds are the door's two ends, and closed: false is a window.
 import { bounds, Deck, sideDelta, stampSize, vttWalls } from './ship/model';
 import { blocksSight } from './ship/stamps';
+import { add, dist, mean, norm, scale, segDist, sub, type Pt as P } from './geom';
+import type { Town } from './town';
 
 interface Pt {
 	x: number;
@@ -58,6 +60,72 @@ export function uvttData(d: Deck, pixelsPerGrid: number): UVTT {
 		portals,
 		environment: { baked_lighting: false, ambient_light: 'ffffffff' },
 		lights,
+		image: '',
+	};
+}
+
+/** Metres a square on a town: five, or ten on the big ones, so the picture stays one a phone can draw. */
+export function townMetres(t: Town): number {
+	return t.w * t.mpu > 1000 ? 10 : 5;
+}
+
+/** A town for a virtual tabletop: every building and the town wall are walls, with a door in each gate and one into
+ *  the keep. Points are in squares from the map's top left corner. */
+export function townUvttData(t: Town, pixelsPerGrid: number): UVTT {
+	const k = t.mpu / townMetres(t);
+	const at = (q: P): Pt => ({ x: r3(q.x * k), y: r3(q.y * k) });
+	const line_of_sight: Pt[][] = t.buildings.map((b) => [...b.poly, b.poly[0] as P].map(at));
+	const portals: UVTT['portals'] = [];
+	const door = (a: P, e: P) => {
+		const d = sub(e, a);
+		portals.push({ position: at(mean([a, e])), bounds: [at(a), at(e)], rotation: r3(Math.atan2(d.y, d.x)), closed: true, freestanding: false });
+	};
+	for (const w of t.walls) {
+		const loop = w.length > 3 && dist(w[0] as P, w.at(-1) as P) < 1e-6;
+		// a wall is cut where a gate stands in it, and the gate is a door across the gap
+		const gaps = new Map<number, P[]>();
+		for (const g of t.gates) {
+			let best = -1, bd = t.roadW;
+			for (let i = 0; i + 1 < w.length; i++) {
+				const dd = segDist(g.p, w[i] as P, w[i + 1] as P);
+				if (dd < bd) [best, bd] = [i, dd];
+			}
+			if (best < 0) continue;
+			const along = norm(sub(w[best + 1] as P, w[best] as P)), half = t.roadW / 2 + 1 / t.mpu;
+			gaps.set(best, [sub(g.p, scale(along, half)), add(g.p, scale(along, half))]);
+		}
+		// a keep stands closed all round, so its side nearest the middle of town gets a door
+		if (loop && !gaps.size) {
+			let best = 0, bd = Infinity;
+			for (let i = 0; i + 1 < w.length; i++) {
+				const dd = dist(mean([w[i] as P, w[i + 1] as P]), t.center);
+				if (dd < bd) [best, bd] = [i, dd];
+			}
+			const a = w[best] as P, e = w[best + 1] as P, m = mean([a, e]), along = norm(sub(e, a)), half = Math.min(2 / t.mpu, dist(a, e) / 3);
+			gaps.set(best, [sub(m, scale(along, half)), add(m, scale(along, half))]);
+		}
+		let run: P[] = [w[0] as P];
+		for (let i = 0; i + 1 < w.length; i++) {
+			const gap = gaps.get(i);
+			if (gap) {
+				const [a, e] = gap as [P, P];
+				run.push(a);
+				line_of_sight.push(run.map(at));
+				door(a, e);
+				run = [e];
+			}
+			run.push(w[i + 1] as P);
+		}
+		if (run.length > 1) line_of_sight.push(run.map(at));
+	}
+	return {
+		format: 0.3,
+		resolution: { map_origin: { x: 0, y: 0 }, map_size: { x: Math.ceil(t.w * k), y: Math.ceil(t.h * k) }, pixels_per_grid: pixelsPerGrid },
+		line_of_sight,
+		objects_line_of_sight: [],
+		portals,
+		environment: { baked_lighting: false, ambient_light: 'ffffffff' },
+		lights: [],
 		image: '',
 	};
 }
