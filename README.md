@@ -8,6 +8,16 @@ Put a `mapsmith` block in a note and you get a walled town, a river village or a
 
 Every map has numbered places: the market, the temple, the inn, the smithy, the harbour and more. Click a number, or the building it sits on, to see the place's name, who keeps it, what it's like and a hook to start trouble with. **Open its note** writes a note for that place, in a folder named after the town, so you can keep writing about it. Every building gets a plan of its inside in that note too (see Inside buildings below), the keep gets a small keep to explore, and a temple has a crypt under it.
 
+## Install
+
+From Obsidian: Settings → Community plugins → Browse → search "Mapsmith", then Install and Enable.
+
+By hand: copy `main.js`, `manifest.json` and `styles.css` from the latest release into `<your vault>/.obsidian/plugins/mapsmith/`, then enable it under Community plugins.
+
+## Use
+
+Open the command palette and run **Insert a town map**, **Insert a ship map**, **Insert a dungeon map** or **Insert the inside of a building**. Each one puts a `mapsmith` block with a new seed where your cursor is, and the map is drawn under it in reading view and live preview. The bar above each map changes it, and every change is written back into the block. Or type a block yourself, as below.
+
 ## The block
 
 ````
@@ -117,7 +127,7 @@ Above the plan is what the place is known for, and a hook. One room in each buil
 
 ## Pro
 
-Everything above is free. Mapsmith Pro is a one-time payment of $6 on itch, and it adds a **Save for virtual tabletop** button under every town, dungeon, ship and building plan. It writes a Universal VTT file (`.dd2vtt`) beside your note: the map as your players should see it, with no numbers and secret doors drawn as plain wall, plus the walls, doors, windows and lights already placed. In a town every building and the town wall are walls and the gates are doors, on a grid of five metres a square (ten on a large town or city). Roll20 imports it as it is, and Foundry reads it with the Universal Battlemap Importer module.
+Everything above is free. Mapsmith Pro will be a one-time payment of $6 on itch. It isn't on sale yet, and this section will link to it when it is. It adds a **Save for virtual tabletop** button under every town, dungeon, ship and building plan. It writes a Universal VTT file (`.dd2vtt`) beside your note: the map as your players should see it, with no numbers and secret doors drawn as plain wall, plus the walls, doors, windows and lights already placed. In a town every building and the town wall are walls and the gates are doors, on a grid of five metres a square (ten on a large town or city). Roll20 imports it as it is, and Foundry reads it with the Universal Battlemap Importer module.
 
 After you buy, copy your download page's address. Paste it into Mapsmith's settings under **Pro key** and press **Check**. Pro stays on in that vault from then on. Lost it? Type the email you bought with under **Lost your key?**.
 

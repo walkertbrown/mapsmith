@@ -133,13 +133,15 @@
 .mapsmith-key {
 	margin: 8px 0 0;
 	padding-left: 1.8em;
-	columns: 2 14em;
+	display: grid;
+	/* two columns when there is room for 14em each, one when there isn't */
+	grid-template-columns: repeat(auto-fit, minmax(max(14em, calc(50% - 1.1em)), 1fr));
+	column-gap: 2.2em;
 	font-size: var(--font-ui-small);
 }
 
 .mapsmith-key li {
 	cursor: pointer;
-	break-inside: avoid;
 }
 
 .mapsmith-key li:hover,
