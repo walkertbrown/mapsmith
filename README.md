@@ -1,12 +1,12 @@
 # Mapsmith
 
-Town, ship and dungeon maps from a seed, drawn right in your notes, and the inside of a town's inns, shops and temples.
+Town, ship and dungeon maps from a seed, drawn right in your notes, and the inside of every building in a town.
 
 ![A Mapsmith town on a river mouth with hills behind it, the temple picked and its card below](docs/demo.png)
 
 Put a `mapsmith` block in a note and you get a walled town, a river village or a harbour city, with its streets, wards, bridges, gates, docks, fields and woods. The same seed always draws the same town, so a map in your campaign notes never changes under you.
 
-Every map has numbered places: the market, the temple, the inn, the smithy, the harbour and more. Click a number, or the building it sits on, to see the place's name, who keeps it, what it's like and a hook to start trouble with. **Open its note** writes a note for that place, in a folder named after the town, so you can keep writing about it. An inn, a tavern, a shop, a smithy or a temple gets a plan of its inside in that note too (see Inside buildings below).
+Every map has numbered places: the market, the temple, the inn, the smithy, the harbour and more. Click a number, or the building it sits on, to see the place's name, who keeps it, what it's like and a hook to start trouble with. **Open its note** writes a note for that place, in a folder named after the town, so you can keep writing about it. Every building gets a plan of its inside in that note too (see Inside buildings below), and the keep gets a small keep to explore.
 
 ## The block
 
@@ -90,7 +90,7 @@ Press **Explore** to play a dungeon on your own. Only the way in can be seen (ro
 
 ## Inside buildings
 
-Add `map: building` for the floor plan of one building, numbered and furnished room by room: an inn's common room, kitchen, store and snug, with guest rooms upstairs and who is staying in them; a tavern; a shop with its workroom; a smithy open to the street; or a temple with its nave, sanctuary and a stair down to the crypt. Most have an upper floor, reached by the stairs in the front room's corner. A place's note from a town map has this block in it already, with the place's name and keeper.
+Add `map: building` for the floor plan of one building, numbered and furnished room by room: an inn's common room, kitchen, store and snug, with guest rooms upstairs and who is staying in them; a tavern; a shop with its workroom; a smithy open to the street; a temple with its nave, sanctuary and a stair down to the crypt; a guildhall with its strongroom; a bathhouse; a library; the watch's barracks and cells; a livery stable with a hayloft; a playhouse; or a mill. Most have an upper floor, reached by the stairs in the front room's corner. A place's note from a town map has this block in it already, with the place's name and keeper.
 
 ````
 ```mapsmith
@@ -102,7 +102,7 @@ kind: inn
 
 | Key | What it does |
 | --- | --- |
-| `kind` | `inn`, `tavern`, `shop`, `smithy` or `temple` |
+| `kind` | `inn`, `tavern`, `shop`, `smithy`, `temple`, `guild`, `bathhouse`, `library`, `barracks`, `stables`, `theatre` or `mill` |
 | `deck` | the floor to show, `1` for the ground floor and `2` for upstairs |
 | `name` | the building's name; without it one is made up |
 | `keeper` | who keeps it; without it one is made up |

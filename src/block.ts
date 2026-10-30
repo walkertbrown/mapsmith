@@ -30,6 +30,7 @@ export interface DungeonOptions {
 	seed: string;
 	size: DungeonSize;
 	kind: DungeonKind;
+	name?: string;
 	/** solo play: the numbers of the rooms explored, or null when the whole map is shown */
 	explore: number[] | null;
 	/** solo play: the rooms where a search found the secret doors */
@@ -54,6 +55,14 @@ const ALIAS: Record<string, string> = {
 	chapel: 'temple',
 	forge: 'smithy',
 	store: 'shop',
+	guildhall: 'guild',
+	baths: 'bathhouse',
+	guardhouse: 'barracks',
+	stable: 'stables',
+	livery: 'stables',
+	playhouse: 'theatre',
+	theater: 'theatre',
+	watermill: 'mill',
 	spaceship: 'ship',
 	starship: 'ship',
 	wreck: 'derelict',
@@ -128,7 +137,7 @@ export function parseBlock(src: string): Parsed {
 			if ((MAPS as readonly string[]).includes(v)) map = v as MapKind;
 			else problems.push(`map can be ${MAPS.join(' or ')}`);
 		} else if (key === 'seed') opts.seed = ship.seed = dungeon.seed = building.seed = val || DEFAULTS.seed;
-		else if (key === 'name') opts.name = building.name = val || undefined;
+		else if (key === 'name') opts.name = dungeon.name = building.name = val || undefined;
 		else if (key === 'keeper') building.keeper = val || undefined;
 		else if (key === 'size') size = clean(val);
 		else if (key === 'mood') {
@@ -220,6 +229,10 @@ export function newSeed(rand: () => number = Math.random): string {
 export function placeNote(t: Town, p: Place, mapNote: string): string {
 	const link = mapNote.replace(/\.md$/, '');
 	const inside = buildingFor(p.kind);
+	// a town's keep is the dungeon keep, small
+	const block = inside
+		? ['map: building', `kind: ${inside}`, `seed: ${t.opts.seed}-${p.n}`, `name: ${p.name}`, ...(p.keeper ? [`keeper: ${p.keeper}`] : [])]
+		: p.kind === 'keep' ? ['map: dungeon', 'kind: keep', 'size: lair', `seed: ${t.opts.seed}-${p.n}`, `name: ${p.name}`] : null;
 	return [
 		'---',
 		`town: "${t.name}"`,
@@ -238,7 +251,7 @@ export function placeNote(t: Town, p: Place, mapNote: string): string {
 		'',
 		p.hook,
 		'',
-		...(inside ? ['## Inside', '', '```mapsmith', 'map: building', `kind: ${inside}`, `seed: ${t.opts.seed}-${p.n}`, `name: ${p.name}`, ...(p.keeper ? [`keeper: ${p.keeper}`] : []), '```', ''] : []),
+		...(block ? ['## Inside', '', '```mapsmith', ...block, '```', ''] : []),
 		'## Notes',
 		'',
 		'',

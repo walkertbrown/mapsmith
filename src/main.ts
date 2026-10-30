@@ -16,7 +16,7 @@ const WATER_TEXT: Record<string, string> = { none: 'No water', river: 'River', c
 const TERRAIN_TEXT: Record<string, string> = { flat: 'Flat', hills: 'Hills', mountains: 'Mountains' };
 const SHIP_TEXT: Record<string, string> = { shuttle: 'Shuttle', corvette: 'Corvette', freighter: 'Freighter', station: 'Station' };
 const DUNGEON_TEXT: Record<string, string> = { lair: 'Lair', dungeon: 'Dungeon', deep: 'Deep', crypt: 'Crypt', keep: 'Keep' };
-const BUILDING_TEXT: Record<string, string> = { inn: 'Inn', tavern: 'Tavern', shop: 'Shop', smithy: 'Smithy', temple: 'Temple' };
+const BUILDING_TEXT: Record<string, string> = { inn: 'Inn', tavern: 'Tavern', shop: 'Shop', smithy: 'Smithy', temple: 'Temple', guild: 'Guildhall', bathhouse: 'Bathhouse', library: 'Library', barracks: 'Barracks', stables: 'Stables', theatre: 'Playhouse', mill: 'Mill' };
 
 /** Where a VTT key is checked, and mailed again. The only places the plugin goes online. */
 export const SERVER = 'https://bulkhead.bananafest-destiny.com';
@@ -274,7 +274,8 @@ class TownMap extends MarkdownRenderChild {
 	}
 
 	drawDungeon(root: HTMLElement, o: DungeonOptions, problems: string[]) {
-		const s = generateDungeon(o.size, o.kind, o.seed);
+		const made = generateDungeon(o.size, o.kind, o.seed);
+		const s = o.name ? { ...made, name: o.name } : made;
 		const deck = s.decks[0];
 		if (!deck) return;
 		const bar = root.createDiv({ cls: 'mapsmith-bar' });
@@ -443,7 +444,7 @@ class TownMap extends MarkdownRenderChild {
 		const hook = card.createDiv({ cls: 'mapsmith-card-hook' });
 		hook.createSpan({ cls: 'mapsmith-card-tag', text: 'Hook' });
 		hook.appendText(p.hook);
-		if (buildingFor(p.kind)) card.createDiv({ cls: 'mapsmith-card-sub', text: 'Its note has a plan of the inside.' });
+		if (buildingFor(p.kind) || p.kind === 'keep') card.createDiv({ cls: 'mapsmith-card-sub', text: 'Its note has a plan of the inside.' });
 		const open = card.createEl('button', { text: 'Open its note' });
 		open.addEventListener('click', () => void this.plugin.openNote(t.name, noteName(p), () => placeNote(t, p, this.ctx.sourcePath), this.ctx.sourcePath));
 	}

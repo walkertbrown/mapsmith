@@ -22,7 +22,7 @@ describe('the inside of a building', () => {
 			it(`${kind} ${seed}: every room has a way in, and fittings sit on the floor`, () => {
 				const g = generateBuilding(kind, seed);
 				expect(g, 'the same seed draws the same building').toEqual(generateBuilding(kind, seed));
-				expect(g.decks.length).toBe(kind === 'temple' ? 1 : 2);
+				expect(g.decks.length).toBe(['temple', 'bathhouse', 'theatre'].includes(kind) ? 1 : 2);
 				const nums = g.decks.flatMap((d) => keyEntries(d).map((e) => e.num));
 				expect(nums).toEqual(nums.map((_, i) => i + 1));
 				g.decks.forEach((d, i) => {
@@ -49,7 +49,7 @@ describe('the inside of a building', () => {
 		expect(p.map).toBe('building');
 		expect(p.building).toMatchObject({ kind: 'tavern', seed: 's', floor: 2, name: 'The Eel', keeper: 'Hob Penn' });
 		expect(p.problems).toEqual([]);
-		expect(parseBlock('map: building\nkind: crypt\nsize: deep').problems).toEqual(["a building's kind can be inn, tavern, shop, smithy, temple", "a building's size comes from its kind"]);
+		expect(parseBlock('map: building\nkind: crypt\nsize: deep').problems).toEqual(["a building's kind can be inn, tavern, shop, smithy, temple, guild, bathhouse, library, barracks, stables, theatre, mill", "a building's size comes from its kind"]);
 		expect(parseBlock('map: dungeon\nkind: keep').dungeon.kind).toBe('keep');
 	});
 
@@ -59,7 +59,14 @@ describe('the inside of a building', () => {
 		const text = placeNote(t, inn, 'Towns/Map.md');
 		const block = /```mapsmith\n([^`]*)```/.exec(text)![1]!;
 		expect(parseBlock(block)).toMatchObject({ map: 'building', problems: [], building: { kind: buildingFor(inn.kind), name: inn.name, seed: `${t.opts.seed}-${inn.n}` } });
-		const other = t.places.find((p) => !buildingFor(p.kind))!;
+		const other = t.places.find((p) => p.kind === 'market' || p.kind === 'harbour')!;
 		expect(placeNote(t, other, 'Towns/Map.md')).not.toContain('```mapsmith');
+	});
+
+	it("gives a town's keep the dungeon keep, under the keep's own name", () => {
+		const t = ['a', 'b', 'c', 'd', 'e'].map((seed) => generateTown({ seed, size: 'city' })).find((x) => x.places.some((p) => p.kind === 'keep'))!;
+		const keep = t.places.find((p) => p.kind === 'keep')!;
+		const block = /```mapsmith\n([^`]*)```/.exec(placeNote(t, keep, 'Towns/Map.md'))![1]!;
+		expect(parseBlock(block)).toMatchObject({ map: 'dungeon', problems: [], dungeon: { kind: 'keep', size: 'lair', name: keep.name } });
 	});
 });
