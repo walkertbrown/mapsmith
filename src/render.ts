@@ -3,6 +3,7 @@
 import { add, along, norm, perp, polyLength, pt, scale, sub, type Poly, type Pt } from './geom';
 import { hashSeed, makeRng, range } from './rng';
 import type { Town } from './town';
+import type { Walked } from './townplay';
 
 export interface Node {
 	tag: string;
@@ -150,6 +151,7 @@ export interface RenderOptions {
 	names?: boolean; // streets, quarters and where the roads go
 	title?: boolean; // the town's name
 	scaleBar?: boolean;
+	walked?: Walked; // solo play: only the places you have been to have numbers, and the next ones a question mark
 }
 
 export function renderTown(t: Town, o: RenderOptions = {}): Node {
@@ -255,7 +257,7 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 	const roofs = t.buildings.map((b) => {
 		const fill = b.kind === 'temple' ? P.temple : b.kind === 'keep' ? P.keep : b.kind === 'hall' || b.kind === 'warehouse' ? P.hall : tone(b);
 		const a: Record<string, string | number> = { d: d(b.poly), fill };
-		if (b.place !== undefined) {
+		if (b.place !== undefined && (!o.walked || o.walked.seen.has(b.place + 1))) {
 			a['data-place'] = b.place;
 			a.class = 'mapsmith-place';
 		}
@@ -322,7 +324,7 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 		kids.push(
 			g(
 				{ 'font-family': 'Georgia, serif', 'font-size': 11, 'font-weight': 'bold', 'text-anchor': 'middle' },
-				t.places.map((p) =>
+				t.places.filter((p) => !o.walked || o.walked.seen.has(p.n)).map((p) =>
 					g({ class: 'mapsmith-badge', 'data-place': p.n - 1 }, [
 						// a ring round the picked place, shown by the stylesheet
 						el('circle', { class: 'mapsmith-ring', cx: f(p.at.x), cy: f(p.at.y), r: rad * 2.2, fill: 'none', stroke: P.badgeInk, 'stroke-width': 3, visibility: 'hidden', 'pointer-events': 'none' }),
@@ -332,6 +334,20 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 				),
 			),
 		);
+		const ways = o.walked?.ways.map((n) => t.places[n - 1]!) ?? [];
+		if (ways.length)
+			kids.push(
+				g(
+					{ 'font-family': 'Georgia, serif', 'font-size': 12, 'font-weight': 'bold', 'text-anchor': 'middle' },
+					ways.map((p) =>
+						g({ class: 'mapsmith-way', 'data-enter': p.n }, [
+							el('title', {}, ['Walk there']),
+							el('circle', { cx: f(p.at.x), cy: f(p.at.y), r: rad * 1.2, fill: P.badge, stroke: P.badgeInk, 'stroke-width': 1.5, 'stroke-dasharray': '3 2' }),
+							el('text', { x: f(p.at.x), y: f(p.at.y + 4), fill: P.badgeInk }, ['?']),
+						]),
+					),
+				),
+			);
 	}
 
 	if (o.title !== false) {

@@ -111,6 +111,8 @@ export interface Parsed {
 	ship: ShipOptions;
 	dungeon: DungeonOptions;
 	building: BuildingOptions;
+	/** solo play in a town: the places walked to, or null when the whole map is shown */
+	explore: number[] | null;
 	problems: string[]; // lines that said something we could not use, in words for the reader
 }
 
@@ -123,6 +125,7 @@ export function parseBlock(src: string): Parsed {
 	let kind = ''; // a dungeon's kinds and a building's differ too
 	let map: MapKind = 'town';
 	let size = ''; // a town's sizes and a ship's differ, so it waits until the map is known
+	let explore: number[] | null = null;
 	for (const raw of src.split('\n')) {
 		const line = raw.trim();
 		if (!line || line.startsWith('#') || line.startsWith('//')) continue;
@@ -145,7 +148,7 @@ export function parseBlock(src: string): Parsed {
 			if ((MOODS as string[]).includes(v)) ship.mood = v as Mood;
 			else problems.push(`mood can be ${MOODS.join(' or ')}`);
 		} else if (key === 'kind') kind = clean(val);
-		else if (key === 'explore') ship.explore = dungeon.explore = building.explore = parseExplored(val);
+		else if (key === 'explore') explore = ship.explore = dungeon.explore = building.explore = parseExplored(val);
 		else if (key === 'found') ship.found = dungeon.found = building.found = parseExplored(val) ?? [];
 		else if (key === 'deck') {
 			const n = Number(val);
@@ -193,7 +196,7 @@ export function parseBlock(src: string): Parsed {
 		if ((SIZES as string[]).includes(size)) opts.size = size as Size;
 		else problems.push(`size can be ${SIZES.join(', ')}`);
 	}
-	return { map, opts, ship, dungeon, building, problems };
+	return { map, opts, ship, dungeon, building, explore, problems };
 }
 
 // The block's body with `key` set to `value`: the first line for that key is rewritten, or a line is added.

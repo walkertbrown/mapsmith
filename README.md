@@ -31,10 +31,13 @@ name: Saltmarch
 | `land` | `parchment` (the default) or `green`, for how the country around the town is painted |
 | `terrain` | `flat` (the default), `hills` or `mountains`. Roads wind round high ground, rivers cut valleys through it, and mountains go to bare rock at the top. |
 | `name` | The town's name. Leave it out and the seed picks one. |
+| `explore` | Solo play in the town: the places you've walked to, `on` to start, or `off` to show the whole map. The **Explore** button writes it for you |
 
 The bar above the map changes size, water, terrain, walls and land, and **New town** rolls a new seed. Each of them rewrites the block, so what you see is always what the note says. The command **Insert a town map** adds a block with a fresh seed.
 
 The map is drawn in the colours of your theme, light or dark.
+
+Press **Explore** to play the town on your own. You know the streets but not who is where: you start at place 1 (the market, or the inn in a hamlet), and every other number is gone. A question mark sits on the nearest places to the ones you've been to; click one to walk there, and its number, name and card appear, with what happened on the way: a quiet street, a rumour, some trouble, or someone you meet. The same walk always has the same thing on it. Where you've been is written into the block, so the note remembers it.
 
 ## Ships
 

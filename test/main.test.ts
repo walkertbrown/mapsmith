@@ -82,6 +82,29 @@ describe('the town block', () => {
 	});
 });
 
+describe('solo play in a town', () => {
+	it('starts at place 1, walks to a question mark, and says what happened on the way', async () => {
+		const { el, flush, content, render } = setup(NOTE);
+		Array.from(el.querySelectorAll('button')).find((b) => b.textContent === 'Explore')!.click();
+		await flush();
+		expect(content()).toContain('explore: on\n');
+		render();
+		const shown = () => Array.from(el.querySelectorAll<HTMLElement>('.mapsmith-key li')).filter((li) => li.style.display !== 'none');
+		expect(shown()).toHaveLength(1);
+		expect(el.querySelectorAll('.mapsmith-badge')).toHaveLength(1);
+		expect(el.querySelector('.mapsmith-hint')!.textContent).toMatch(/^1 of \d+ places visited\. Click a question mark/);
+		const way = el.querySelector('.mapsmith-way')!;
+		const num = way.getAttribute('data-enter')!;
+		way.querySelector('circle')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+		await flush();
+		expect(content()).toContain(`explore: ${num}\n`);
+		render();
+		expect(shown()).toHaveLength(2);
+		expect(el.querySelector('.mapsmith-card-n')!.textContent).toBe(num);
+		expect(el.querySelector('.mapsmith-card')!.textContent).toContain('On the way');
+	});
+});
+
 describe('saving for a virtual tabletop', () => {
 	const DUNGEON = '# Below\n\n```mapsmith\nmap: dungeon\nseed: saltmarch\n```\n';
 

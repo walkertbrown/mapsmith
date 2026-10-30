@@ -9,6 +9,7 @@ import { keyEntries, type Deck, type RoomInfo } from './ship/model';
 import { boarding, explore, onEntering, type Explored } from './explore';
 import { DUNGEON_DARK, DUNGEON_LIGHT, SHIP_DARK, SHIP_LIGHT, renderDeck, type ShipPalette } from './ship/svg';
 import { SIZES, TERRAINS, WATERS, generateTown, type Place, type Town } from './town';
+import { onTheWay, walk } from './townplay';
 import { gridPixels, svgToPng, townMetres, townUvttData, uvttData, type UVTT } from './vtt';
 
 const SIZE_TEXT: Record<string, string> = { hamlet: 'Hamlet', village: 'Village', town: 'Town', 'large-town': 'Large town', city: 'City' };
@@ -157,7 +158,7 @@ class TownMap extends MarkdownRenderChild {
 		const root = this.containerEl;
 		root.empty();
 		root.addClass('mapsmith');
-		const { map, opts, ship, dungeon, building, problems } = parseBlock(this.src);
+		const { map, opts, ship, dungeon, building, explore: walked, problems } = parseBlock(this.src);
 		if (map === 'ship') {
 			this.drawShip(root, ship, problems);
 			return;
@@ -194,19 +195,42 @@ class TownMap extends MarkdownRenderChild {
 		land.toggleClass('is-on', green);
 		land.setAttr('aria-label', 'How the country around the town is painted');
 		land.addEventListener('click', () => this.set('land', green ? 'parchment' : 'green'));
+		const play = bar.createEl('button', { text: 'Explore', cls: 'mapsmith-toggle' });
+		play.toggleClass('is-on', walked !== null);
+		play.setAttr('aria-label', walked ? 'Show the whole map' : 'Play it alone: you start at place 1, and every other place stays unknown until you walk there');
+		play.addEventListener('click', () => this.set('explore', walked ? 'off' : 'on'));
 		const again = bar.createEl('button', { text: 'New town', cls: 'mod-cta' });
 		again.addEventListener('click', () => this.set('seed', newSeed()));
 		if (problems.length) root.createDiv({ cls: 'mapsmith-problem', text: problems.join('. ') + '.' });
 
 		const dark = document.body.hasClass('theme-dark');
 		const frame = root.createDiv({ cls: 'mapsmith-map' });
-		const svg = toDom(renderTown(t, { palette: dark ? DARK : LIGHT }), frame);
+		const solo = walked ? walk(t, walked) : undefined;
+		if (solo) {
+			const came = this.plugin.entered;
+			if (came?.path === this.ctx.sourcePath) {
+				this.picked = came.num - 1;
+				this.plugin.entered = null;
+			}
+			const left = solo.ways.length ? ' Click a question mark to walk there.' : '';
+			root.insertBefore(createDiv({ cls: 'mapsmith-hint', text: `${solo.seen.size} of ${t.places.length} places visited.${left}` }), frame);
+		}
+		const svg = toDom(renderTown(t, { palette: dark ? DARK : LIGHT, walked: solo }), frame);
+		if (solo)
+			svg.addEventListener('click', (ev) => {
+				const way = (ev.target as Element | null)?.closest('[data-enter]');
+				if (!way) return;
+				const num = Number(way.getAttribute('data-enter'));
+				this.plugin.entered = { path: this.ctx.sourcePath, num };
+				this.set('explore', [...(walked ?? []), num].sort((a, b) => a - b).join(', '));
+			});
 		const card = root.createDiv({ cls: 'mapsmith-card' });
 		const key = root.createEl('ol', { cls: 'mapsmith-key' });
 		const items = t.places.map((p) => {
 			const li = key.createEl('li');
 			li.createSpan({ cls: 'mapsmith-key-name', text: p.name });
 			li.createSpan({ cls: 'mapsmith-key-label', text: p.label });
+			if (solo && !solo.seen.has(p.n)) li.hide();
 			return li;
 		});
 		const vtt = root.createDiv({ cls: 'mapsmith-tools' }).createEl('button', { text: 'Save for virtual tabletop' });
@@ -221,7 +245,10 @@ class TownMap extends MarkdownRenderChild {
 				.catch((e: unknown) => new Notice(`Could not save the VTT file: ${e instanceof Error ? e.message : String(e)}`))
 				.finally(() => (vtt.disabled = false));
 		});
-		this.pickable(svg, items, (i) => this.drawCard(card, t, i < 0 ? undefined : t.places[i]));
+		this.pickable(svg, items, (i) => {
+			const p = i < 0 || (solo && !solo.seen.has(i + 1)) ? undefined : t.places[i];
+			this.drawCard(card, t, p, solo && p && p.n > 1 ? onTheWay(t.opts.seed, p.n) : undefined);
+		});
 	}
 
 	/** Clicking a number on the map or a line of the key picks that place; the pick lasts through a redraw. */
@@ -430,7 +457,7 @@ class TownMap extends MarkdownRenderChild {
 		open.addEventListener('click', () => void this.plugin.openNote(folder, noteName({ name: `${r.num} ${r.name}`, n: r.num }), () => roomNote(ship, deck, r, this.ctx.sourcePath, what), this.ctx.sourcePath));
 	}
 
-	drawCard(card: HTMLElement, t: Town, p: Place | undefined) {
+	drawCard(card: HTMLElement, t: Town, p: Place | undefined, way?: string) {
 		card.empty();
 		if (!p) {
 			card.createDiv({ cls: 'mapsmith-hint', text: `Click a number or a building with one to see who's there.` });
@@ -444,6 +471,11 @@ class TownMap extends MarkdownRenderChild {
 		const hook = card.createDiv({ cls: 'mapsmith-card-hook' });
 		hook.createSpan({ cls: 'mapsmith-card-tag', text: 'Hook' });
 		hook.appendText(p.hook);
+		if (way) {
+			const on = card.createDiv({ cls: 'mapsmith-card-hook' });
+			on.createSpan({ cls: 'mapsmith-card-tag', text: 'On the way' });
+			on.appendText(way);
+		}
 		if (buildingFor(p.kind) || p.kind === 'keep') card.createDiv({ cls: 'mapsmith-card-sub', text: 'Its note has a plan of the inside.' });
 		const open = card.createEl('button', { text: 'Open its note' });
 		open.addEventListener('click', () => void this.plugin.openNote(t.name, noteName(p), () => placeNote(t, p, this.ctx.sourcePath), this.ctx.sourcePath));
