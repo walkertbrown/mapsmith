@@ -75,7 +75,7 @@ describe('roomNote', () => {
 	it('reads a dungeon block', () => {
 		const p = parseBlock('map: dungeon\nseed: Wren 7\nsize: Deep\nkind: castle');
 		expect(p.map).toBe('dungeon');
-		expect(p.dungeon).toEqual({ seed: 'Wren 7', size: 'deep', kind: 'keep' });
+		expect(p.dungeon).toEqual({ seed: 'Wren 7', size: 'deep', kind: 'keep', explore: null });
 		expect(p.problems).toEqual([]);
 		const bad = parseBlock('map: dungeon\nsize: city\nkind: swamp');
 		expect(bad.problems.join(' ')).toContain("a dungeon's size can be lair, dungeon, deep");

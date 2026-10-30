@@ -78,8 +78,13 @@ kind: crypt
 | --- | --- |
 | `size` | `lair` (4 to 6 rooms), `dungeon` (8 to 10) or `deep` (13 to 16, with stairs going further down) |
 | `kind` | `crypt`, family vaults under the ground, or `keep`, a fallen stronghold: buildings in a walled yard, a tower on each corner and a barred gate |
+| `explore` | solo play: the numbers of the rooms you've been in, such as `1, 3, 4`, or `off` to show the whole map. The **Explore** button writes it for you |
 
 Each room has a line on what's there, and some have a hazard or treasure; the room at the far end always has treasure. Above the map is the dungeon's story with a hook. **Open its note** writes a room to a folder named after the dungeon, and **New dungeon** rolls a new seed. The command **Insert a dungeon map** adds a dungeon block.
+
+### Exploring alone
+
+Press **Explore** to play a dungeon on your own. Only the way in, room 1, can be seen, with the corridors and open ground that lead out of it. Every other room stays dark. A question mark sits at each door into the dark; click it to go in, and that room, its number and its card appear. Secret doors stay hidden in this mode too. What you've explored is written into the block, so the note remembers how far you got. Press **Explore** again to see the whole map.
 
 ## Pro
 

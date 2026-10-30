@@ -2,7 +2,8 @@
 // torn breaches, fixtures, doors, numbers and room names. Grid units are scaled by S into the picture.
 
 import { el, f, g, type Node } from '../render';
-import { CORRIDOR, VOID, badgeSpots, bounds, cellAt, derived, footprint, keyEntries, sideDelta, type Deck, type Door } from './model';
+import { CORRIDOR, VOID, badgeSpots, bounds, cellAt, derived, footprint, idx, keyEntries, sideDelta, type Deck, type Door } from './model';
+import type { Explored } from '../explore';
 import { drawStamp, type Surface } from './stamps';
 
 export interface ShipPalette {
@@ -103,6 +104,8 @@ export interface ShipRenderOptions {
 	id?: string;
 	/** the map players see in a VTT: no numbers, and a secret door is only wall */
 	players?: boolean;
+	/** solo play: only what has been seen, with a mark on each door into the dark */
+	fog?: Explored;
 }
 
 export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
@@ -200,7 +203,7 @@ export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 			{ 'font-family': 'Georgia, serif', 'font-size': f(r * 1.2), 'font-weight': 'bold', 'text-anchor': 'middle' },
 			keyEntries(d).flatMap((e, i) => {
 				const c = spots.get(e.id);
-				if (!c) return [];
+				if (!c || (o.fog && !o.fog.rooms.has(e.id))) return [];
 				const cx = X(c.x), cy = f(Y(c.y) - S * 0.45);
 				return [
 					g({ class: 'mapsmith-badge', 'data-place': i }, [
@@ -212,6 +215,34 @@ export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 			}),
 		),
 	);
+
+	if (o.fog) {
+		// dark over everything not seen yet; the walls and rock round a seen floor still show
+		const holes: string[] = [];
+		const m = S * 0.3;
+		for (let y = b.y0; y < b.y1; y++)
+			for (let x = b.x0; x < b.x1; x++) {
+				if (!o.fog.seen[idx(x, y)]) continue;
+				let e = x + 1;
+				while (e < b.x1 && o.fog.seen[idx(e, y)]) e++;
+				holes.push(`M${f(X(x) - m)} ${f(Y(y) - m)}h${f((e - x) * S + m * 2)}v${f(S + m * 2)}h${f(-(e - x) * S - m * 2)}Z`);
+				x = e;
+			}
+		kids.push(
+			el('defs', {}, [el('mask', { id: `${id}-fog` }, [el('rect', { width: w * S, height: h * S, fill: '#fff' }), el('path', { d: holes.join(''), fill: '#000' })])]),
+			el('rect', { width: w * S, height: h * S, fill: P.bg, mask: `url(#${id}-fog)`, 'pointer-events': 'none' }),
+			g(
+				{ 'font-family': 'Georgia, serif', 'font-size': f(r * 1.4), 'font-weight': 'bold', 'text-anchor': 'middle' },
+				o.fog.ways.map((k) =>
+					g({ class: 'mapsmith-way', 'data-enter': k.num }, [
+						el('title', {}, ['Go in']),
+						el('circle', { cx: X(k.x + 0.5), cy: Y(k.y + 0.5), r: f(r * 1.2), fill: P.badge, stroke: P.badgeInk, 'stroke-width': 1.5, 'stroke-dasharray': '3 2' }),
+						el('text', { x: X(k.x + 0.5), y: f(Y(k.y + 0.5) + r * 0.5), fill: P.badgeInk }, ['?']),
+					]),
+				),
+			),
+		);
+	}
 
 	return el('svg', { xmlns: 'http://www.w3.org/2000/svg', viewBox: `0 0 ${w * S} ${h * S}`, role: 'img', 'aria-label': d.name }, kids);
 }

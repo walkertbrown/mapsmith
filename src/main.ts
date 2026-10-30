@@ -5,6 +5,7 @@ import { DARK, LIGHT, renderTown, toDom, toString } from './render';
 import { hashSeed } from './rng';
 import { generate, type GenResult } from './ship/generate';
 import { keyEntries, type Deck, type RoomInfo } from './ship/model';
+import { explore, type Explored } from './explore';
 import { DUNGEON_DARK, DUNGEON_LIGHT, SHIP_DARK, SHIP_LIGHT, renderDeck, type ShipPalette } from './ship/svg';
 import { SIZES, TERRAINS, WATERS, generateTown, type Place, type Town } from './town';
 import { gridPixels, svgToPng, uvttData } from './vtt';
@@ -25,6 +26,8 @@ interface Settings {
 
 export default class MapsmithPlugin extends Plugin {
 	settings: Settings = { key: '', vtt: false };
+	/** The room just walked into in solo play, so the redrawn map opens on it. */
+	entered: { path: string; num: number } | null = null;
 
 	async onload() {
 		this.registerMarkdownCodeBlockProcessor('mapsmith', (src, el, ctx) => {
@@ -258,6 +261,11 @@ class TownMap extends MarkdownRenderChild {
 			sel.value = o[k];
 			sel.addEventListener('change', () => this.set(k, sel.value));
 		}
+		const solo = o.explore !== null;
+		const play = bar.createEl('button', { text: 'Explore', cls: 'mapsmith-toggle' });
+		play.toggleClass('is-on', solo);
+		play.setAttr('aria-label', solo ? 'Show the whole map' : 'Play it alone: every room stays dark until you go in');
+		play.addEventListener('click', () => this.set('explore', solo ? 'off' : '1'));
 		const again = bar.createEl('button', { text: 'New dungeon', cls: 'mod-cta' });
 		again.addEventListener('click', () => this.set('seed', newSeed()));
 		if (problems.length) root.createDiv({ cls: 'mapsmith-problem', text: problems.join('. ') + '.' });
@@ -266,26 +274,47 @@ class TownMap extends MarkdownRenderChild {
 		const pal = dark ? DUNGEON_DARK : DUNGEON_LIGHT;
 		const id = `ms${hashSeed(`${o.seed}:${o.size}:${o.kind}`).toString(36)}`;
 		// a keep stands in the open, so only a crypt gets rock round it
-		this.drawPlan(root, s, deck, 'What happened here', o.kind === 'crypt' ? pal : { ...pal, rock: undefined }, id, 'dungeon');
+		const fog = o.explore ? explore(deck, o.explore) : undefined;
+		const enter = (num: number) => this.set('explore', [...(o.explore ?? []), num].sort((a, b) => a - b).join(', '));
+		this.drawPlan(root, s, deck, 'What happened here', o.kind === 'crypt' ? pal : { ...pal, rock: undefined }, id, 'dungeon', fog && { fog, enter });
 	}
 
 	// The part a ship and a dungeon share: the name, the story, the map, the card and the key.
-	drawPlan(root: HTMLElement, s: GenResult, deck: Deck, summary: string, palette: ShipPalette, id: string, what: 'ship' | 'dungeon') {
+	drawPlan(root: HTMLElement, s: GenResult, deck: Deck, summary: string, palette: ShipPalette, id: string, what: 'ship' | 'dungeon', solo?: { fog: Explored; enter: (num: number) => void }) {
 		root.createDiv({ cls: 'mapsmith-title', text: s.decks.length > 1 ? `${s.name}, ${deck.name.toLowerCase()}` : s.name });
+		const rooms = keyEntries(deck);
+		if (solo) {
+			const came = this.plugin.entered;
+			if (came?.path === this.ctx.sourcePath) {
+				this.picked = rooms.findIndex((r) => r.num === came.num);
+				this.plugin.entered = null;
+			}
+			const left = solo.fog.ways.length ? ' Click a question mark to go through that door.' : solo.fog.rooms.size < rooms.length ? ' No open door leads on. The rest is behind secret doors.' : '';
+			root.createDiv({ cls: 'mapsmith-hint', text: `${solo.fog.rooms.size} of ${rooms.length} rooms explored.${left}` });
+		}
 		const story = root.createEl('details', { cls: 'mapsmith-story' });
 		story.createEl('summary', { text: summary });
 		for (const para of s.brief.split('\n\n')) story.createEl('p', { text: para });
 
 		const frame = root.createDiv({ cls: 'mapsmith-map' });
-		const svg = toDom(renderDeck(deck, { palette, id }), frame);
+		const svg = toDom(renderDeck(deck, { palette, id, fog: solo?.fog }), frame);
 		const card = root.createDiv({ cls: 'mapsmith-card' });
 		const key = root.createEl('ol', { cls: 'mapsmith-key' });
-		const rooms = keyEntries(deck);
 		const items = rooms.map((r) => {
 			const li = key.createEl('li');
 			li.createSpan({ cls: 'mapsmith-key-name', text: r.name });
+			if (solo && !solo.fog.rooms.has(r.id)) li.hide();
 			return li;
 		});
+		if (solo)
+			svg.addEventListener('click', (ev) => {
+				const way = (ev.target as Element | null)?.closest('[data-enter]');
+				if (!way) return;
+				const num = Number(way.getAttribute('data-enter'));
+				// the room you walk into is the one shown once the note draws the map again
+				this.plugin.entered = { path: this.ctx.sourcePath, num };
+				solo.enter(num);
+			});
 		const ship = s.name.replace(/^Derelict — /, '');
 		const deckName = s.decks.length > 1 ? deck.name : undefined;
 		const vtt = root.createDiv({ cls: 'mapsmith-tools' }).createEl('button', { text: 'Save for virtual tabletop' });

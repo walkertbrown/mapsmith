@@ -30,8 +30,13 @@
 }
 
 .mapsmith-map .mapsmith-place,
-.mapsmith-map .mapsmith-badge {
+.mapsmith-map .mapsmith-badge,
+.mapsmith-map .mapsmith-way {
 	cursor: pointer;
+}
+
+.mapsmith-map .mapsmith-way:hover circle {
+	fill: var(--interactive-accent);
 }
 
 .mapsmith-map .mapsmith-place.is-picked {

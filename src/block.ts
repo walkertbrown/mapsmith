@@ -2,11 +2,12 @@
 // changes one of them. Kept apart from main.ts so it can be tested without Obsidian.
 
 import { DUNGEON_KINDS, DUNGEON_SIZES, type DungeonKind, type DungeonSize } from './dungeon';
+import { parseExplored } from './explore';
 import type { Mood, ShipSize } from './ship/generate';
 import type { RoomInfo } from './ship/model';
 import { DEFAULTS, LANDS, SIDES, SIZES, TERRAINS, WATERS, type Land, type Side, type Terrain, type Size, type Town, type TownOptions, type Water, type Place } from './town';
 
-export const KEYS = ['map', 'seed', 'size', 'water', 'side', 'walls', 'land', 'terrain', 'name', 'mood', 'deck', 'kind'] as const;
+export const KEYS = ['map', 'seed', 'size', 'water', 'side', 'walls', 'land', 'terrain', 'name', 'mood', 'deck', 'kind', 'explore'] as const;
 export type Key = (typeof KEYS)[number];
 
 export const MAPS = ['town', 'ship', 'dungeon'] as const;
@@ -25,6 +26,8 @@ export interface DungeonOptions {
 	seed: string;
 	size: DungeonSize;
 	kind: DungeonKind;
+	/** solo play: the numbers of the rooms explored, or null when the whole map is shown */
+	explore: number[] | null;
 }
 
 const ALIAS: Record<string, string> = {
@@ -81,7 +84,7 @@ export interface Parsed {
 export function parseBlock(src: string): Parsed {
 	const opts: TownOptions = { ...DEFAULTS };
 	const ship: ShipOptions = { seed: DEFAULTS.seed, size: 'corvette', mood: 'intact', deck: 1 };
-	const dungeon: DungeonOptions = { seed: DEFAULTS.seed, size: 'dungeon', kind: 'crypt' };
+	const dungeon: DungeonOptions = { seed: DEFAULTS.seed, size: 'dungeon', kind: 'crypt', explore: null };
 	const problems: string[] = [];
 	let map: MapKind = 'town';
 	let size = ''; // a town's sizes and a ship's differ, so it waits until the map is known
@@ -109,7 +112,8 @@ export function parseBlock(src: string): Parsed {
 			const v = clean(val);
 			if ((DUNGEON_KINDS as string[]).includes(v)) dungeon.kind = v as DungeonKind;
 			else problems.push(`kind can be ${DUNGEON_KINDS.join(' or ')}`);
-		} else if (key === 'deck') {
+		} else if (key === 'explore') dungeon.explore = parseExplored(val);
+		else if (key === 'deck') {
 			const n = Number(val);
 			if (Number.isInteger(n) && n >= 1) ship.deck = n;
 			else problems.push('deck is a number, 1 for the first');
