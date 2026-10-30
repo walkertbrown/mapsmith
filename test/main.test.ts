@@ -113,7 +113,7 @@ describe('solo play in a dungeon', () => {
 		const { el, flush, content, render } = setup(CRYPT);
 		Array.from(el.querySelectorAll('button')).find((b) => b.textContent === 'Explore')!.click();
 		await flush();
-		expect(content()).toContain('explore: 1\n');
+		expect(content()).toContain('explore: on\n');
 		render();
 		const shown = () => Array.from(el.querySelectorAll<HTMLElement>('.mapsmith-key li')).filter((li) => li.style.display !== 'none');
 		expect(shown().map((li) => li.getAttribute('value'))).toEqual(['1']);
@@ -121,7 +121,7 @@ describe('solo play in a dungeon', () => {
 		const num = way.getAttribute('data-enter')!;
 		way.querySelector('circle')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 		await flush();
-		expect(content()).toContain(`explore: 1, ${num}\n`);
+		expect(content()).toContain(`explore: ${num}\n`);
 		render();
 		expect(shown().map((li) => li.getAttribute('value'))).toEqual(['1', num]);
 		expect(el.querySelector('.mapsmith-card-n')!.textContent).toBe(num);

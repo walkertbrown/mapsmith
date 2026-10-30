@@ -51,7 +51,7 @@ describe('ship blocks', () => {
 		const { map, ship, problems } = parseBlock('map: starship\nseed: Wren 7\nsize: Freighter\nmood: wreck\ndeck: 2\n');
 		expect(problems).toEqual([]);
 		expect(map).toBe('ship');
-		expect(ship).toEqual({ seed: 'Wren 7', size: 'freighter', mood: 'derelict', deck: 2 });
+		expect(ship).toEqual({ seed: 'Wren 7', size: 'freighter', mood: 'derelict', deck: 2, explore: null });
 	});
 
 	it('says which sizes a ship can be, and leaves towns alone', () => {

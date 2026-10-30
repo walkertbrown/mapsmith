@@ -20,6 +20,8 @@ export interface ShipOptions {
 	size: ShipSize;
 	mood: Mood;
 	deck: number; // counted from 1, as the deck list shows it
+	/** solo play, as a dungeon's */
+	explore: number[] | null;
 }
 
 export interface DungeonOptions {
@@ -83,7 +85,7 @@ export interface Parsed {
 
 export function parseBlock(src: string): Parsed {
 	const opts: TownOptions = { ...DEFAULTS };
-	const ship: ShipOptions = { seed: DEFAULTS.seed, size: 'corvette', mood: 'intact', deck: 1 };
+	const ship: ShipOptions = { seed: DEFAULTS.seed, size: 'corvette', mood: 'intact', deck: 1, explore: null };
 	const dungeon: DungeonOptions = { seed: DEFAULTS.seed, size: 'dungeon', kind: 'crypt', explore: null };
 	const problems: string[] = [];
 	let map: MapKind = 'town';
@@ -112,7 +114,7 @@ export function parseBlock(src: string): Parsed {
 			const v = clean(val);
 			if ((DUNGEON_KINDS as string[]).includes(v)) dungeon.kind = v as DungeonKind;
 			else problems.push(`kind can be ${DUNGEON_KINDS.join(' or ')}`);
-		} else if (key === 'explore') dungeon.explore = parseExplored(val);
+		} else if (key === 'explore') ship.explore = dungeon.explore = parseExplored(val);
 		else if (key === 'deck') {
 			const n = Number(val);
 			if (Number.isInteger(n) && n >= 1) ship.deck = n;

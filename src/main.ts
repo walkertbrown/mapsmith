@@ -5,7 +5,7 @@ import { DARK, LIGHT, renderTown, toDom, toString } from './render';
 import { hashSeed } from './rng';
 import { generate, type GenResult } from './ship/generate';
 import { keyEntries, type Deck, type RoomInfo } from './ship/model';
-import { explore, onEntering, type Explored } from './explore';
+import { boarding, explore, onEntering, type Explored } from './explore';
 import { DUNGEON_DARK, DUNGEON_LIGHT, SHIP_DARK, SHIP_LIGHT, renderDeck, type ShipPalette } from './ship/svg';
 import { SIZES, TERRAINS, WATERS, generateTown, type Place, type Town } from './town';
 import { gridPixels, svgToPng, uvttData } from './vtt';
@@ -241,13 +241,14 @@ class TownMap extends MarkdownRenderChild {
 		const mood = bar.createEl('button', { text: wreck ? 'Derelict' : 'Intact', cls: 'mapsmith-toggle' });
 		mood.toggleClass('is-on', wreck);
 		mood.addEventListener('click', () => this.set('mood', wreck ? 'intact' : 'derelict'));
+		const solo = this.soloPlay(bar, deck, o.explore, boarding(deck), (num) => onEntering(o.seed, o.mood, o.size, num));
 		const again = bar.createEl('button', { text: 'New ship', cls: 'mod-cta' });
 		again.addEventListener('click', () => this.set('seed', newSeed()));
 		if (problems.length) root.createDiv({ cls: 'mapsmith-problem', text: problems.join('. ') + '.' });
 
 		const dark = document.body.hasClass('theme-dark');
 		const id = `ms${hashSeed(`${o.seed}:${o.size}:${o.mood}:${at}`).toString(36)}`;
-		this.drawPlan(root, s, deck, wreck ? 'What happened here' : 'Who is aboard', dark ? SHIP_DARK : SHIP_LIGHT, id, 'ship');
+		this.drawPlan(root, s, deck, wreck ? 'What happened here' : 'Who is aboard', dark ? SHIP_DARK : SHIP_LIGHT, id, 'ship', solo);
 	}
 
 	drawDungeon(root: HTMLElement, o: DungeonOptions, problems: string[]) {
@@ -261,11 +262,7 @@ class TownMap extends MarkdownRenderChild {
 			sel.value = o[k];
 			sel.addEventListener('change', () => this.set(k, sel.value));
 		}
-		const solo = o.explore !== null;
-		const play = bar.createEl('button', { text: 'Explore', cls: 'mapsmith-toggle' });
-		play.toggleClass('is-on', solo);
-		play.setAttr('aria-label', solo ? 'Show the whole map' : 'Play it alone: every room stays dark until you go in');
-		play.addEventListener('click', () => this.set('explore', solo ? 'off' : '1'));
+		const solo = this.soloPlay(bar, deck, o.explore, [], (num) => onEntering(o.seed, o.kind, o.size, num));
 		const again = bar.createEl('button', { text: 'New dungeon', cls: 'mod-cta' });
 		again.addEventListener('click', () => this.set('seed', newSeed()));
 		if (problems.length) root.createDiv({ cls: 'mapsmith-problem', text: problems.join('. ') + '.' });
@@ -274,14 +271,25 @@ class TownMap extends MarkdownRenderChild {
 		const pal = dark ? DUNGEON_DARK : DUNGEON_LIGHT;
 		const id = `ms${hashSeed(`${o.seed}:${o.size}:${o.kind}`).toString(36)}`;
 		// a keep stands in the open, so only a crypt gets rock round it
-		const fog = o.explore ? explore(deck, o.explore) : undefined;
-		// what happened in each room you walked into, on its card and in its note
-		if (o.explore) for (const r of keyEntries(deck)) if (r.num !== 1 && o.explore.includes(r.num)) {
+		this.drawPlan(root, s, deck, 'What happened here', o.kind === 'crypt' ? pal : { ...pal, rock: undefined }, id, 'dungeon', solo);
+	}
+
+	/** The Explore button. In solo play, also what has been seen, and what was inside each room walked into,
+	 *  on its card and in its note. */
+	soloPlay(bar: HTMLElement, deck: Deck, explored: number[] | null, from: [number, number][], inside: (num: number) => string) {
+		const on = explored !== null;
+		const play = bar.createEl('button', { text: 'Explore', cls: 'mapsmith-toggle' });
+		play.toggleClass('is-on', on);
+		play.setAttr('aria-label', on ? 'Show the whole map' : 'Play it alone: every room stays dark until you go in');
+		play.addEventListener('click', () => this.set('explore', on ? 'off' : 'on'));
+		if (!explored) return undefined;
+		const fog = explore(deck, explored, from);
+		const start = explore(deck, [], from).rooms;
+		for (const r of keyEntries(deck)) {
 			const k = deck.key[r.id];
-			if (k) k.notes = `${k.notes}\nInside: ${onEntering(o.seed, o.kind, o.size, r.num)}`;
+			if (k && fog.rooms.has(r.id) && !start.has(r.id)) k.notes = `${k.notes}\nInside: ${inside(r.num)}`;
 		}
-		const enter = (num: number) => this.set('explore', [...(o.explore ?? []), num].sort((a, b) => a - b).join(', '));
-		this.drawPlan(root, s, deck, 'What happened here', o.kind === 'crypt' ? pal : { ...pal, rock: undefined }, id, 'dungeon', fog && { fog, enter });
+		return { fog, enter: (num: number) => this.set('explore', [...explored, num].sort((a, b) => a - b).join(', ')) };
 	}
 
 	// The part a ship and a dungeon share: the name, the story, the map, the card and the key.

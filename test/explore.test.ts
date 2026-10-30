@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { parseBlock, setKey } from '../src/block';
 import { generateDungeon } from '../src/dungeon';
-import { explore, onEntering, parseExplored } from '../src/explore';
+import { boarding, explore, onEntering, parseExplored } from '../src/explore';
+import { generate } from '../src/ship/generate';
+import { hashSeed } from '../src/rng';
 import { keyEntries } from '../src/ship/model';
 import { renderDeck } from '../src/ship/svg';
 import { toString } from '../src/render';
@@ -68,5 +70,34 @@ describe('solo play', () => {
 		// a deep dungeon's foes come two or more at a time
 		expect([...crypt].some((t) => /^(Two|Three|Four|Five|Six) /.test(t))).toBe(true);
 		expect([...crypt].some((t) => /^A skeleton climbs/.test(t))).toBe(false);
+	});
+
+	it('boards a ship at its airlocks, or at the ladder from the deck before, and reaches every room on each deck', () => {
+		for (const size of ['shuttle', 'corvette', 'freighter', 'station'] as const)
+			for (const mood of ['intact', 'derelict'] as const)
+				for (const seed of ['a', 'b', 'c']) {
+					const ship = generate(size, mood, hashSeed(seed));
+					for (const d of ship.decks) {
+						const from = boarding(d);
+						expect(from.length).toBeGreaterThan(0);
+						let been: number[] = [];
+						const start = explore(d, [], from);
+						expect(start.rooms.size + [...start.seen].filter(Boolean).length).toBeGreaterThan(0);
+						for (let step = 0; step < 200; step++) {
+							const e = explore(d, been, from);
+							if (!e.ways.length) break;
+							been = [...been, e.ways[0]!.num];
+						}
+						// a room cut off by damage on a derelict can stay out of reach; on an intact ship nothing does
+						if (mood === 'intact') expect(explore(d, been, from).rooms.size).toBe(keyEntries(d).length);
+					}
+				}
+	});
+
+	it('has things aboard for intact ships and derelicts', () => {
+		const t = (mood: 'intact' | 'derelict') => new Set(Array.from({ length: 200 }, (_, i) => onEntering(`s${i}`, mood, 'station', 4)));
+		const intact = t('intact'), derelict = t('derelict');
+		expect(intact.size).toBeGreaterThan(15);
+		expect([...intact].some((x) => derelict.has(x))).toBe(false);
 	});
 });

@@ -56,8 +56,9 @@ mood: derelict
 | `size` | `shuttle`, `corvette`, `freighter` or `station`. Freighters and stations have two decks. |
 | `mood` | `intact`, a working ship with a crew aboard, or `derelict`, a wreck with a story of how it got that way, holes torn in the hull, hazards and salvage |
 | `deck` | Which deck to draw, `1` or `2` |
+| `explore` | Solo play, as on a dungeon (see Exploring alone below) |
 
-Above the map is the ship's story, folded away until you open it. Click a room's number for what's in it; **Open its note** writes the room to a folder named after the ship. The bar changes size, deck and mood, and **New ship** rolls a new seed. The command **Insert a ship map** adds a ship block.
+Above the map is the ship's story, folded away until you open it. Click a room's number for what's in it; **Open its note** writes the room to a folder named after the ship. The bar changes size, deck and mood, and **New ship** rolls a new seed. The command **Insert a ship map** adds a ship block. **Explore** works on ships too: you come aboard through an airlock, or by the ladder from the deck before, and each compartment rolls what's aboard. Intact ships and derelicts have different lists.
 
 ## Dungeons
 
@@ -78,13 +79,13 @@ kind: crypt
 | --- | --- |
 | `size` | `lair` (4 to 6 rooms), `dungeon` (8 to 10) or `deep` (13 to 16, with stairs going further down) |
 | `kind` | `crypt`, family vaults under the ground, or `keep`, a fallen stronghold: buildings in a walled yard, a tower on each corner and a barred gate |
-| `explore` | solo play: the numbers of the rooms you've been in, such as `1, 3, 4`, or `off` to show the whole map. The **Explore** button writes it for you |
+| `explore` | solo play: the numbers of the rooms you've been in, such as `1, 3, 4`, `on` to start, or `off` to show the whole map. The **Explore** button writes it for you |
 
 Each room has a line on what's there, and some have a hazard or treasure; the room at the far end always has treasure. Above the map is the dungeon's story with a hook. **Open its note** writes a room to a folder named after the dungeon, and **New dungeon** rolls a new seed. The command **Insert a dungeon map** adds a dungeon block.
 
 ### Exploring alone
 
-Press **Explore** to play a dungeon on your own. Only the way in, room 1, can be seen, with the corridors and open ground that lead out of it. Every other room stays dark. A question mark sits at each door into the dark; click it to go in, and that room, its number and its card appear. The card also says what you found inside: nothing, a sign of what's ahead, a trap, or something waiting for you, with the numbers growing in a deeper dungeon. Crypts and keeps have lists of their own, and a room always rolls the same thing, so it's still there when you come back. Secret doors stay hidden in this mode too. What you've explored is written into the block, so the note remembers how far you got. Press **Explore** again to see the whole map.
+Press **Explore** to play a dungeon on your own. Only the way in can be seen (room 1 in a dungeon), with the corridors and open ground that lead out of it. Every other room stays dark. A question mark sits at each door into the dark; click it to go in, and that room, its number and its card appear. The card also says what you found inside: nothing, a sign of what's ahead, a trap, or something waiting for you, with the numbers growing in a deeper dungeon. Crypts and keeps have lists of their own, and a room always rolls the same thing, so it's still there when you come back. Secret doors stay hidden in this mode too. What you've explored is written into the block, so the note remembers how far you got. Press **Explore** again to see the whole map.
 
 ## Pro
 
