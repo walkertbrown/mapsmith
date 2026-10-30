@@ -92,6 +92,8 @@ Press **Explore** to play a dungeon on your own. Only the way in can be seen (ro
 
 Add `map: building` for the floor plan of one building, numbered and furnished room by room: an inn's common room, kitchen, store and snug, with guest rooms upstairs and who is staying in them; a tavern; a shop with its workroom; a smithy open to the street; a temple with its nave, sanctuary and a stair down to the crypt; a guildhall with its strongroom; a bathhouse; a library; the watch's barracks and cells; a livery stable with a hayloft; a playhouse; or a mill. Most have an upper floor, reached by the stairs in the front room's corner. A place's note from a town map has this block in it already, with the place's name and keeper.
 
+![The upper floor of an inn: a landing with guest rooms either side, the room under the eaves picked, and who is staying in it](docs/building.png)
+
 ````
 ```mapsmith
 map: building
