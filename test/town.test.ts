@@ -136,3 +136,19 @@ describe('generateTown', () => {
 		expect(toString(renderTown(b))).not.toContain('<mask');
 	});
 });
+
+describe('painted towns', () => {
+	it('lays grass, cobbles and water over the plan, and leaves the plain one alone', () => {
+		const t = generateTown({ seed: 'harbour', size: 'town', water: 'coast' });
+		const plain = toString(renderTown(t));
+		expect(plain).not.toContain('<pattern');
+		const paint = { grass: 'data:image/jpeg;base64,Rw', cobble: 'data:image/jpeg;base64,Qw', water: 'data:image/jpeg;base64,Vw', strength: 1 };
+		const svg = toString(renderTown(t, { paint }));
+		for (const name of ['grass', 'cobble', 'water']) expect(svg).toMatch(new RegExp(`<pattern id="ms[a-z0-9]+-tx-${name}"`));
+		expect(svg).toContain('href="data:image/jpeg;base64,Qw"');
+		// every pattern it fills with is defined
+		const used = [...svg.matchAll(/url\(#(ms[a-z0-9]+-tx-[a-z]+)\)/g)].map((m) => m[1]);
+		for (const u of used) expect(svg).toContain(`id="${u}"`);
+	});
+});
+

@@ -8,7 +8,7 @@ import type { Mood, ShipSize } from './ship/generate';
 import type { RoomInfo } from './ship/model';
 import { DEFAULTS, LANDS, SIDES, SIZES, TERRAINS, WATERS, type Land, type Side, type Terrain, type Size, type Town, type TownOptions, type Water, type Place } from './town';
 
-export const KEYS = ['map', 'seed', 'size', 'water', 'side', 'walls', 'land', 'terrain', 'name', 'mood', 'deck', 'kind', 'explore', 'found', 'keeper'] as const;
+export const KEYS = ['map', 'seed', 'size', 'water', 'side', 'walls', 'land', 'terrain', 'name', 'mood', 'deck', 'kind', 'explore', 'found', 'keeper', 'look'] as const;
 export type Key = (typeof KEYS)[number];
 
 export const MAPS = ['town', 'ship', 'dungeon', 'building'] as const;
@@ -118,6 +118,8 @@ export interface Parsed {
 	building: BuildingOptions;
 	/** solo play in a town: the places walked to, or null when the whole map is shown */
 	explore: number[] | null;
+	/** look: plain draws the flat plan without the painted ground */
+	plain: boolean;
 	problems: string[]; // lines that said something we could not use, in words for the reader
 }
 
@@ -131,6 +133,7 @@ export function parseBlock(src: string): Parsed {
 	let map: MapKind = 'town';
 	let size = ''; // a town's sizes and a ship's differ, so it waits until the map is known
 	let explore: number[] | null = null;
+	let plain = false;
 	for (const raw of src.split('\n')) {
 		const line = raw.trim();
 		if (!line || line.startsWith('#') || line.startsWith('//')) continue;
@@ -181,6 +184,11 @@ export function parseBlock(src: string): Parsed {
 			if ((TERRAINS as string[]).includes(v)) opts.terrain = v as Terrain;
 			else if (v === 'none') opts.terrain = 'flat';
 			else problems.push(`terrain can be ${TERRAINS.join(', ')}`);
+		} else if (key === 'look') {
+			const v = val.trim().toLowerCase();
+			if (v === 'plain' || v === 'flat') plain = true;
+			else if (v === 'painted' || v === 'paint' || v === '') plain = false;
+			else problems.push('look can be painted or plain');
 		} else problems.push(`no key "${key}"; try ${KEYS.join(', ')}`);
 	}
 	if (kind && map === 'building') {
@@ -201,7 +209,7 @@ export function parseBlock(src: string): Parsed {
 		if ((SIZES as string[]).includes(size)) opts.size = size as Size;
 		else problems.push(`size can be ${SIZES.join(', ')}`);
 	}
-	return { map, opts, ship, dungeon, building, explore, problems };
+	return { map, opts, ship, dungeon, building, explore, plain, problems };
 }
 
 // The block's body with `key` set to `value`: the first line for that key is rewritten, or a line is added.

@@ -28,7 +28,23 @@ export interface ShipPalette {
 	wallWidth: number;
 	/** hatching round the floors, for rock */
 	rock?: string;
+	/** painted textures instead of flat colour: data URIs */
+	paint?: Paint;
 }
+
+export interface Paint {
+	/** every floor, unless its tint has its own */
+	floor: string;
+	byTint?: Record<number, string>;
+	/** what is round the floors: rock for a dungeon cut into the ground, or the ground outside */
+	around: string;
+	/** a shadow round each floor, as if it were sunk into the rock */
+	sunk?: boolean;
+	/** how much darker, 0 to 1, for a dark theme */
+	dim?: number;
+}
+
+const TILE = 5; // grid squares a texture covers before it repeats
 
 // Bulkhead's dungeon look on parchment, and its blueprint in the dark
 export const SHIP_LIGHT: ShipPalette = {
@@ -117,6 +133,15 @@ export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 	const X = (gx: number) => f((gx - x0) * S);
 	const Y = (gy: number) => f((gy - y0) * S);
 	const kids: Node[] = [el('rect', { width: w * S, height: h * S, fill: P.bg })];
+	const paint = P.paint;
+	const tex = new Map<string, string>();
+	const texture = (uri: string) => {
+		if (!tex.has(uri)) tex.set(uri, `${id}-tex${tex.size}`);
+		return `url(#${tex.get(uri) ?? ''})`;
+	};
+	if (paint) kids.push(el('rect', { width: w * S, height: h * S, fill: texture(paint.around) }));
+	// rock sits back, darker than the floors cut into it
+	if (paint?.sunk) kids.push(el('rect', { width: w * S, height: h * S, fill: '#000', opacity: 0.3 }));
 
 	// floors, one rect per run of the same region along a row
 	const floors = new Map<string, string[]>();
@@ -129,7 +154,9 @@ export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 			while (e < b.x1 && cellAt(d, e, y) === c) e++;
 			if (c !== VOID) {
 				const tint = d.tints[c];
-				const fill = c === CORRIDOR ? P.corridor : tint !== undefined ? (P.tints[tint] ?? P.floor) : P.floor;
+				const fill = paint
+					? texture((tint !== undefined ? paint.byTint?.[tint] : undefined) ?? paint.floor)
+					: c === CORRIDOR ? P.corridor : tint !== undefined ? (P.tints[tint] ?? P.floor) : P.floor;
 				const run = `M${X(x)} ${Y(y)}h${(e - x) * S}v${S}h${-(e - x) * S}Z`;
 				floors.set(fill, [...(floors.get(fill) ?? []), run]);
 				runs.push(run);
@@ -137,7 +164,8 @@ export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 			x = e;
 		}
 	}
-	if (P.rock) {
+	if (paint?.sunk) kids.push(el('path', { d: runs.join(''), fill: 'none', stroke: 'rgba(0,0,0,0.45)', 'stroke-width': f(S * 0.7), 'stroke-linejoin': 'round' }));
+	else if (P.rock && !paint) {
 		// a band of hatching round every floor, the way rock is drawn on a hand-made dungeon
 		kids.push(
 			el('defs', {}, [
@@ -149,6 +177,11 @@ export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 		kids.push(el('path', { d: runs.join(''), fill: 'none', stroke: `url(#${id}-rock)`, 'stroke-width': f(S * 1.4), 'stroke-linejoin': 'round' }));
 	}
 	for (const [fill, parts] of floors) kids.push(el('path', { d: parts.join(''), fill }));
+	if (paint?.dim) kids.push(el('rect', { width: w * S, height: h * S, fill: '#000', opacity: paint.dim }));
+	if (tex.size)
+		kids.splice(1, 0, el('defs', {}, [...tex].map(([uri, tid]) =>
+			el('pattern', { id: tid, width: TILE * S, height: TILE * S, patternUnits: 'userSpaceOnUse' }, [el('image', { href: uri, width: TILE * S, height: TILE * S, preserveAspectRatio: 'none' })]),
+		)));
 	if (o.grid !== false) {
 		kids.push(
 			el('defs', {}, [
@@ -173,7 +206,8 @@ export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 	if (d.breaches.length) kids.push(drawBreaches(d, P, X, Y));
 
 	// fixtures
-	const sc = { stroke: P.stamp, fill: P.stampFill, accent: P.stampAccent };
+	// on a painted floor, furniture is wood and iron rather than white paper
+	const sc = paint ? { stroke: '#24190f', fill: '#9a7650', accent: '#6a4e33' } : { stroke: P.stamp, fill: P.stampFill, accent: P.stampAccent };
 	for (const st of d.stamps) {
 		const [fw, fh] = footprint(st.kind);
 		const rw = st.rot % 2 ? fh : fw, rh = st.rot % 2 ? fw : fh;

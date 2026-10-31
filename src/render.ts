@@ -151,7 +151,16 @@ export interface RenderOptions {
 	names?: boolean; // streets, quarters and where the roads go
 	title?: boolean; // the town's name
 	scaleBar?: boolean;
+	paint?: TownPaint; // textures laid thin over the flat colours, so the ground reads as grass, cobbles and water
 	walked?: Walked; // solo play: only the places you have been to have numbers, and the next ones a question mark
+}
+
+/** Tiles (image data URIs) for a painted town, and how strongly they show over the flat colours. */
+export interface TownPaint {
+	grass: string;
+	cobble: string;
+	water: string;
+	strength: number; // 1 in the light theme, less in the dark
 }
 
 export function renderTown(t: Town, o: RenderOptions = {}): Node {
@@ -172,6 +181,20 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 			t.fields.map((x) => el('path', { d: d(x.poly), fill: P.field[x.tone % P.field.length] as string })),
 		),
 	);
+
+	// painted ground: each texture once as a pattern, tiled at its size in metres
+	const pats: Node[] = [];
+	const tex = (name: string, uri: string, metres: number) => {
+		const pid = `${id}-tx-${name}`, size = f(u(metres));
+		pats.push(el('pattern', { id: pid, patternUnits: 'userSpaceOnUse', width: size, height: size }, [el('image', { href: uri, width: size, height: size, preserveAspectRatio: 'none' })]));
+		return `url(#${pid})`;
+	};
+	const pt = o.paint;
+	const op = (x: number) => Math.round(x * (pt?.strength ?? 0) * 100) / 100;
+	if (pt) {
+		kids.push(el('defs', {}, pats));
+		kids.push(el('rect', { x: 0, y: 0, width: t.w, height: t.h, fill: tex('grass', pt.grass, 40), opacity: op(0.42) }));
+	}
 
 	// high ground: each band above a contour washes the land a little darker, and above the tree line it's rock.
 	// Each band nudged toward the light and away from it, less the band itself, lights the slopes facing
@@ -215,12 +238,14 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 		kids.push(el('path', { ...line, stroke: P.bank, 'stroke-width': f(t.riverW + 4 + u(11)) }));
 		kids.push(el('path', { ...line, stroke: P.waterInk, 'stroke-width': f(t.riverW + 4) }));
 		kids.push(el('path', { ...line, stroke: P.water, 'stroke-width': f(t.riverW) }));
+		if (pt) kids.push(el('path', { ...line, stroke: tex('river', pt.water, 50), 'stroke-width': f(t.riverW), opacity: op(0.55) }));
 		// the current: a paler thread down the middle
 		kids.push(el('path', { ...line, stroke: P.wave, 'stroke-width': f(t.riverW * 0.28), opacity: 0.8 }));
 	}
 	// the sea or lake over the river's end, so the river runs into it
 	if (t.water.length) {
 		kids.push(g({ fill: P.water, stroke: P.waterInk, 'stroke-width': 2 }, t.water.map((w) => el('path', { d: d(w) }))));
+		if (pt) kids.push(g({ fill: tex('water', pt.water, 70), opacity: op(0.55) }, t.water.map((w) => el('path', { d: d(w) }))));
 		kids.push(g({ fill: 'none', stroke: P.wave, 'stroke-width': 1.5, 'stroke-linecap': 'round' }, waves(t, r)));
 	}
 
@@ -229,6 +254,10 @@ export function renderTown(t: Town, o: RenderOptions = {}): Node {
 	kids.push(g({ fill: 'none', stroke: P.road, 'stroke-width': f(t.roadW), 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, t.roads.map((l) => el('path', { d: d(l, false) }))));
 	kids.push(g({ fill: P.plaza, stroke: P.roadInk, 'stroke-width': 0.8 }, t.wards.filter((w) => w.kind === 'market').map((w) => el('path', { d: d(w.poly) }))));
 	kids.push(g({ fill: P.green }, t.wards.filter((w) => w.kind === 'park' || w.kind === 'temple' || w.kind === 'keep').map((w) => el('path', { d: d(w.poly) }))));
+	if (pt) {
+		const paved = t.wards.filter((w) => w.kind === 'dense' || w.kind === 'docks' || w.kind === 'market').map((w) => el('path', { d: d(w.poly) }));
+		kids.push(g({ fill: tex('cobble', pt.cobble, 9), opacity: op(0.5) }, [...t.streets.map((x) => el('path', { d: d(x) })), ...paved]));
+	}
 
 	// bridges and piers
 	kids.push(

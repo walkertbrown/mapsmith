@@ -1,5 +1,5 @@
 import { App, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, Plugin, PluginSettingTab, SettingDefinitionItem, TFile, normalizePath, requestUrl } from 'obsidian';
-import { BUILDING_KINDS, buildingFor, generateBuilding } from './building';
+import { BUILDING_KINDS, CELLAR, buildingFor, generateBuilding } from './building';
 import { DUNGEON_KINDS, DUNGEON_SIZES, generateDungeon } from './dungeon';
 import { SHIP_SIZES, editBlock, newSeed, noteName, parseBlock, placeNote, roomNote, setKey, type BuildingOptions, type DungeonOptions, type Key, type ShipOptions } from './block';
 import { DARK, LIGHT, renderTown, toDom, toString, type Node as SvgNode } from './render';
@@ -8,6 +8,7 @@ import { generate, type GenResult } from './ship/generate';
 import { keyEntries, type Deck, type RoomInfo } from './ship/model';
 import { boarding, explore, onEntering, type Explored } from './explore';
 import { DUNGEON_DARK, DUNGEON_LIGHT, SHIP_DARK, SHIP_LIGHT, renderDeck, type ShipPalette } from './ship/svg';
+import { buildingPaint, dungeonPaint, townPaint } from './paint';
 import { SIZES, TERRAINS, WATERS, generateTown, type Place, type Town } from './town';
 import { onTheWay, walk } from './townplay';
 import { gridPixels, svgToPng, townMetres, townUvttData, uvttData, type UVTT } from './vtt';
@@ -158,17 +159,17 @@ class TownMap extends MarkdownRenderChild {
 		const root = this.containerEl;
 		root.empty();
 		root.addClass('mapsmith');
-		const { map, opts, ship, dungeon, building, explore: walked, problems } = parseBlock(this.src);
+		const { map, opts, ship, dungeon, building, explore: walked, plain, problems } = parseBlock(this.src);
 		if (map === 'ship') {
 			this.drawShip(root, ship, problems);
 			return;
 		}
 		if (map === 'dungeon') {
-			this.drawDungeon(root, dungeon, problems);
+			this.drawDungeon(root, dungeon, problems, plain);
 			return;
 		}
 		if (map === 'building') {
-			this.drawBuilding(root, building, problems);
+			this.drawBuilding(root, building, problems, plain);
 			return;
 		}
 		const t = generateTown(opts);
@@ -215,7 +216,7 @@ class TownMap extends MarkdownRenderChild {
 			const left = solo.ways.length ? ' Click a question mark to walk there.' : '';
 			root.insertBefore(createDiv({ cls: 'mapsmith-hint', text: `${solo.seen.size} of ${t.places.length} places visited.${left}` }), frame);
 		}
-		const svg = toDom(renderTown(t, { palette: dark ? DARK : LIGHT, walked: solo }), frame);
+		const svg = toDom(renderTown(t, { palette: dark ? DARK : LIGHT, walked: solo, paint: plain ? undefined : townPaint(dark) }), frame);
 		if (solo)
 			svg.addEventListener('click', (ev) => {
 				const way = (ev.target as Element | null)?.closest('[data-enter]');
@@ -238,7 +239,7 @@ class TownMap extends MarkdownRenderChild {
 			vtt.disabled = true;
 			// the players' map: no numbers, and the squares it is cut into run past the edge to a whole one
 			const data = townUvttData(t, 0), m = townMetres(t);
-			const pic = renderTown(t, { palette: LIGHT, labels: false });
+			const pic = renderTown(t, { palette: LIGHT, labels: false, paint: plain ? undefined : townPaint(false) });
 			pic.a.viewBox = `0 0 ${(data.resolution.map_size.x * m) / t.mpu} ${(data.resolution.map_size.y * m) / t.mpu}`;
 			this.plugin
 				.saveVtt(data, pic, t.name, this.ctx.sourcePath, ` One square is ${m} metres.`)
@@ -300,7 +301,7 @@ class TownMap extends MarkdownRenderChild {
 		this.drawPlan(root, s, deck, wreck ? 'What happened here' : 'Who is aboard', dark ? SHIP_DARK : SHIP_LIGHT, id, 'ship', solo);
 	}
 
-	drawDungeon(root: HTMLElement, o: DungeonOptions, problems: string[]) {
+	drawDungeon(root: HTMLElement, o: DungeonOptions, problems: string[], plain = false) {
 		const made = generateDungeon(o.size, o.kind, o.seed);
 		const s = o.name ? { ...made, name: o.name } : made;
 		const deck = s.decks[0];
@@ -321,10 +322,10 @@ class TownMap extends MarkdownRenderChild {
 		const pal = dark ? DUNGEON_DARK : DUNGEON_LIGHT;
 		const id = `ms${hashSeed(`${o.seed}:${o.size}:${o.kind}`).toString(36)}`;
 		// a keep stands in the open; a crypt and a mine are cut into rock
-		this.drawPlan(root, s, deck, 'What happened here', o.kind !== 'keep' ? pal : { ...pal, rock: undefined }, id, 'dungeon', solo);
+		this.drawPlan(root, s, deck, 'What happened here', { ...pal, rock: o.kind !== 'keep' ? pal.rock : undefined, paint: plain ? undefined : dungeonPaint(o.kind, dark) }, id, 'dungeon', solo);
 	}
 
-	drawBuilding(root: HTMLElement, o: BuildingOptions, problems: string[]) {
+	drawBuilding(root: HTMLElement, o: BuildingOptions, problems: string[], plain = false) {
 		const s = generateBuilding(o.kind, o.seed, o.name, o.keeper);
 		const at = Math.min(o.floor, s.decks.length) - 1;
 		const deck = s.decks[at];
@@ -348,7 +349,7 @@ class TownMap extends MarkdownRenderChild {
 
 		const dark = document.body.hasClass('theme-dark');
 		const id = `ms${hashSeed(`${o.seed}:${o.kind}:${at}`).toString(36)}`;
-		this.drawPlan(root, s, deck, 'About the place', { ...(dark ? DUNGEON_DARK : DUNGEON_LIGHT), rock: undefined }, id, 'building', solo);
+		this.drawPlan(root, s, deck, 'About the place', { ...(dark ? DUNGEON_DARK : DUNGEON_LIGHT), rock: undefined, paint: plain ? undefined : buildingPaint(deck.name === CELLAR, dark) }, id, 'building', solo);
 	}
 
 	/** The Explore button. In solo play, also what has been seen, and what was inside each room walked into,

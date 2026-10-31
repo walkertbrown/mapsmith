@@ -125,6 +125,10 @@ kind: inn
 
 Above the plan is what the place is known for, and a hook. One room in each building hides something. **New building** rolls a new seed, and the command **Insert the inside of a building** adds a block.
 
+## The look
+
+Towns, dungeons and buildings are painted: grass, cobbles and water in a town, flagstones, rock and planks inside. The textures are part of the plugin, so nothing is fetched. Add `look: plain` to any block for the flat drawing instead. Ships keep their deck plan look.
+
 ## Pro
 
 Everything above is free. Mapsmith Pro will be a one-time payment of $6 on itch. It isn't on sale yet, and this section will link to it when it is. It adds a **Save for virtual tabletop** button under every town, dungeon, ship and building plan. It writes a Universal VTT file (`.dd2vtt`) beside your note: the map as your players should see it, with no numbers and secret doors drawn as plain wall, plus the walls, doors, windows and lights already placed. In a town every building and the town wall are walls and the gates are doors, on a grid of five metres a square (ten on a large town or city). Roll20 imports it as it is, and Foundry reads it with the Universal Battlemap Importer module.

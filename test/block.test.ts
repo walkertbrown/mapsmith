@@ -83,4 +83,10 @@ describe('roomNote', () => {
 		expect(roomNote('The Vell Crypt', undefined, { num: 3, name: 'Ossuary', notes: 'Bones.\nTreasure: A cup.' }, 'Maps/Crypt.md', 'dungeon')).toContain('dungeon: "The Vell Crypt"');
 		expect(roomNote('The Vell Crypt', undefined, { num: 3, name: 'Ossuary', notes: 'Bones.\nTreasure: A cup.' }, 'Maps/Crypt.md', 'dungeon')).toContain('**Treasure:** A cup.');
 	});
+	it('reads the look', () => {
+		expect(parseBlock('seed: a\n').plain).toBe(false);
+		expect(parseBlock('look: Plain\n').plain).toBe(true);
+		expect(parseBlock('look: painted\n').plain).toBe(false);
+		expect(parseBlock('look: shiny\n').problems.join(' ')).toContain('look can be painted or plain');
+	});
 });
