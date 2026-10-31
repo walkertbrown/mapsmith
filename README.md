@@ -127,7 +127,7 @@ Above the plan is what the place is known for, and a hook. One room in each buil
 
 ## The look
 
-Towns, dungeons and buildings are painted: grass, cobbles and water in a town, flagstones, rock and planks inside. The textures are part of the plugin, so nothing is fetched. Add `look: plain` to any block for the flat drawing instead. Ships keep their deck plan look.
+Every map is painted: grass, cobbles and water in a town; flagstones, rock and planks inside; steel plate and grating on a ship, out among the stars. The textures are part of the plugin, so nothing is fetched. Add `look: plain` to any block for the flat drawing instead.
 
 ## Pro
 

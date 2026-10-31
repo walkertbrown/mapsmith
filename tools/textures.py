@@ -5,7 +5,7 @@ from PIL import Image
 
 SIZE = 256
 BLEND = {'rock', 'cave', 'grass', 'water'}  # built ones (stone, wood, cobble) already wrap and would ghost
-NAMES = ['stone', 'wood', 'rock', 'cave', 'cobble', 'grass', 'water']
+NAMES = ['stone', 'wood', 'rock', 'cave', 'cobble', 'grass', 'water', 'plate', 'grate', 'bay']
 
 def wrap(im):
     # mix in the image shifted by half, weighted toward it only near the edges

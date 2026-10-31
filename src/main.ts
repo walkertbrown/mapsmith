@@ -8,7 +8,7 @@ import { generate, type GenResult } from './ship/generate';
 import { keyEntries, type Deck, type RoomInfo } from './ship/model';
 import { boarding, explore, onEntering, type Explored } from './explore';
 import { DUNGEON_DARK, DUNGEON_LIGHT, SHIP_DARK, SHIP_LIGHT, renderDeck, type ShipPalette } from './ship/svg';
-import { buildingPaint, dungeonPaint, townPaint } from './paint';
+import { buildingPaint, dungeonPaint, shipPainted, townPaint } from './paint';
 import { SIZES, TERRAINS, WATERS, generateTown, type Place, type Town } from './town';
 import { onTheWay, walk } from './townplay';
 import { gridPixels, svgToPng, townMetres, townUvttData, uvttData, type UVTT } from './vtt';
@@ -161,7 +161,7 @@ class TownMap extends MarkdownRenderChild {
 		root.addClass('mapsmith');
 		const { map, opts, ship, dungeon, building, explore: walked, plain, problems } = parseBlock(this.src);
 		if (map === 'ship') {
-			this.drawShip(root, ship, problems);
+			this.drawShip(root, ship, problems, plain);
 			return;
 		}
 		if (map === 'dungeon') {
@@ -270,7 +270,7 @@ class TownMap extends MarkdownRenderChild {
 		else show(-1);
 	}
 
-	drawShip(root: HTMLElement, o: ShipOptions, problems: string[]) {
+	drawShip(root: HTMLElement, o: ShipOptions, problems: string[], plain = false) {
 		const s = generate(o.size, o.mood, hashSeed(o.seed));
 		const at = Math.min(o.deck, s.decks.length) - 1;
 		const deck = s.decks[at];
@@ -298,7 +298,7 @@ class TownMap extends MarkdownRenderChild {
 
 		const dark = document.body.hasClass('theme-dark');
 		const id = `ms${hashSeed(`${o.seed}:${o.size}:${o.mood}:${at}`).toString(36)}`;
-		this.drawPlan(root, s, deck, wreck ? 'What happened here' : 'Who is aboard', dark ? SHIP_DARK : SHIP_LIGHT, id, 'ship', solo);
+		this.drawPlan(root, s, deck, wreck ? 'What happened here' : 'Who is aboard', plain ? (dark ? SHIP_DARK : SHIP_LIGHT) : shipPainted(dark), id, 'ship', solo);
 	}
 
 	drawDungeon(root: HTMLElement, o: DungeonOptions, problems: string[], plain = false) {

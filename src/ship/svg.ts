@@ -36,8 +36,14 @@ export interface Paint {
 	/** every floor, unless its tint has its own */
 	floor: string;
 	byTint?: Record<number, string>;
+	/** corridors, when they differ from the rooms */
+	corridor?: string;
 	/** what is round the floors: rock for a dungeon cut into the ground, or the ground outside */
-	around: string;
+	around?: string;
+	/** open space round a ship: black with stars, drawn here rather than painted */
+	space?: boolean;
+	/** what the fittings are made of; wood when not given */
+	fittings?: { stroke: string; fill: string; accent: string };
 	/** a shadow round each floor, as if it were sunk into the rock */
 	sunk?: boolean;
 	/** how much darker, 0 to 1, for a dark theme */
@@ -124,6 +130,19 @@ export interface ShipRenderOptions {
 	fog?: Explored;
 }
 
+// Black space and a scatter of stars, the same for the same map every time.
+function stars(w: number, h: number, seed: string): Node {
+	let a = 2166136261;
+	for (let i = 0; i < seed.length; i++) a = Math.imul(a ^ seed.charCodeAt(i), 16777619);
+	const r = () => ((a = Math.imul(a ^ (a >>> 15), 2246822507) + 0x6d2b79f5), (a >>> 0) / 4294967296);
+	const dots: Node[] = [];
+	for (let i = 0, n = Math.round((w * h) / 2600); i < n; i++) {
+		const big = r() < 0.08;
+		dots.push(el('circle', { cx: f(r() * w), cy: f(r() * h), r: big ? 1.4 : f(0.4 + r() * 0.5), fill: big ? '#fff6dd' : '#cfd8e6', opacity: f(0.35 + r() * 0.6) }));
+	}
+	return el('g', {}, [el('rect', { width: w, height: h, fill: '#05070d' }), ...dots]);
+}
+
 export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 	const P = o.palette ?? SHIP_LIGHT;
 	const id = o.id ?? 'ship';
@@ -139,7 +158,8 @@ export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 		if (!tex.has(uri)) tex.set(uri, `${id}-tex${tex.size}`);
 		return `url(#${tex.get(uri) ?? ''})`;
 	};
-	if (paint) kids.push(el('rect', { width: w * S, height: h * S, fill: texture(paint.around) }));
+	if (paint?.around) kids.push(el('rect', { width: w * S, height: h * S, fill: texture(paint.around) }));
+	if (paint?.space) kids.push(stars(w * S, h * S, id));
 	// rock sits back, darker than the floors cut into it
 	if (paint?.sunk) kids.push(el('rect', { width: w * S, height: h * S, fill: '#000', opacity: 0.3 }));
 
@@ -155,7 +175,7 @@ export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 			if (c !== VOID) {
 				const tint = d.tints[c];
 				const fill = paint
-					? texture((tint !== undefined ? paint.byTint?.[tint] : undefined) ?? paint.floor)
+					? texture((c === CORRIDOR ? paint.corridor : undefined) ?? (tint !== undefined ? paint.byTint?.[tint] : undefined) ?? paint.floor)
 					: c === CORRIDOR ? P.corridor : tint !== undefined ? (P.tints[tint] ?? P.floor) : P.floor;
 				const run = `M${X(x)} ${Y(y)}h${(e - x) * S}v${S}h${-(e - x) * S}Z`;
 				floors.set(fill, [...(floors.get(fill) ?? []), run]);
@@ -207,7 +227,7 @@ export function renderDeck(d: Deck, o: ShipRenderOptions = {}): Node {
 
 	// fixtures
 	// on a painted floor, furniture is wood and iron rather than white paper
-	const sc = paint ? { stroke: '#24190f', fill: '#9a7650', accent: '#6a4e33' } : { stroke: P.stamp, fill: P.stampFill, accent: P.stampAccent };
+	const sc = paint ? (paint.fittings ?? { stroke: '#24190f', fill: '#9a7650', accent: '#6a4e33' }) : { stroke: P.stamp, fill: P.stampFill, accent: P.stampAccent };
 	for (const st of d.stamps) {
 		const [fw, fh] = footprint(st.kind);
 		const rw = st.rot % 2 ? fh : fw, rh = st.rot % 2 ? fw : fh;
