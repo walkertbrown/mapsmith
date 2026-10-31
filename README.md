@@ -1,6 +1,6 @@
 # Mapsmith
 
-Town, ship and dungeon maps from a seed, drawn right in your notes, and the inside of every building in a town.
+A map generator for TTRPGs: fantasy towns, dungeons and spaceships from a seed, drawn right in your notes, and the inside of every building in a town.
 
 ![A Mapsmith town on a river mouth with hills behind it, the temple picked and its card below](docs/demo.png)
 

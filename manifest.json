@@ -3,7 +3,7 @@
 	"name": "Mapsmith",
 	"version": "0.7.1",
 	"minAppVersion": "1.13.0",
-	"description": "Town, dungeon and ship maps from a seed, drawn in your notes. Click a numbered place for its name, a hook and a note, open the floor plan of any building, or explore a town on your own.",
+	"description": "A map generator for TTRPGs: fantasy towns, dungeons and spaceships from a seed, drawn in your notes. Click a numbered place for its name, a hook and a note, open any building's floor plan, or explore solo.",
 	"author": "Bananafest Destiny",
 	"isDesktopOnly": false
 }
