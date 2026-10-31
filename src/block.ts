@@ -74,6 +74,11 @@ const ALIAS: Record<string, string> = {
 	castle: 'keep',
 	fort: 'keep',
 	fortress: 'keep',
+	mines: 'mine',
+	cave: 'mine',
+	caves: 'mine',
+	cavern: 'mine',
+	workings: 'mine',
 	small: 'lair',
 	big: 'deep',
 	large: 'deep',
@@ -183,7 +188,7 @@ export function parseBlock(src: string): Parsed {
 		else problems.push(`a building's kind can be ${BUILDING_KINDS.join(', ')}`);
 	} else if (kind) {
 		if ((DUNGEON_KINDS as string[]).includes(kind)) dungeon.kind = kind as DungeonKind;
-		else problems.push(`kind can be ${DUNGEON_KINDS.join(' or ')}`);
+		else problems.push(`kind can be ${DUNGEON_KINDS.slice(0, -1).join(', ')} or ${DUNGEON_KINDS[DUNGEON_KINDS.length - 1] ?? ''}`);
 	}
 	if (size && map === 'building') problems.push("a building's size comes from its kind");
 	else if (size && map === 'ship') {

@@ -91,7 +91,7 @@ kind: crypt
 | Key | What it does |
 | --- | --- |
 | `size` | `lair` (4 to 6 rooms), `dungeon` (8 to 10) or `deep` (13 to 16, with stairs going further down) |
-| `kind` | `crypt`, family vaults under the ground, or `keep`, a fallen stronghold: buildings in a walled yard, a tower on each corner and a barred gate |
+| `kind` | `crypt`, family vaults under the ground, `keep`, a fallen stronghold: buildings in a walled yard, a tower on each corner and a barred gate, or `mine`, old workings in a hill: drifts, pillar galleries, a flooded sump and the lode at the far end |
 | `explore` | solo play: the numbers of the rooms you've been in, such as `1, 3, 4`, `on` to start, or `off` to show the whole map. The **Explore** button writes it for you |
 | `found` | solo play: the rooms where a search found the secret doors. The **Search for secret doors** button writes it |
 

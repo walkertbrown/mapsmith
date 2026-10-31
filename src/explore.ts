@@ -134,6 +134,15 @@ const FOES: Record<Kind, Foe[]> = {
 		['A skeleton of the old garrison still stands its post', '# skeletons of the old garrison still stand their posts'],
 		['A giant spider waits in the rafters', '# giant spiders wait in the rafters'],
 	],
+	mine: [
+		['A claim jumper swings a pick at you', '# claim jumpers come at you with picks'],
+		['A kobold drops its lamp and runs for a side tunnel', '# kobolds drop their lamps and run for the side tunnels'],
+		['A giant centipede comes out of a crack in the rock', '# giant centipedes come out of the cracks in the rock'],
+		['A dead miner still swings at the face', '# dead miners still swing at the face'],
+		['A burrowing worm breaks through the floor', 'A burrowing worm breaks through the floor, and # of its young follow'],
+		['A dwarf prospector says this seam is theirs', '# dwarf prospectors say this seam is theirs'],
+		['A cave bear has made its den here', '# cave bears have made their den here'],
+	],
 	intact: [
 		['A crew member looks up from their work', '# crew look up from their work'],
 		['A guard levels a stunner at you', '# guards level stunners at you'],
@@ -176,6 +185,14 @@ const SIGNS: Record<Kind, string[]> = {
 		'Blood on the flagstones, and none of it yours.',
 		'A tripwire that someone has already cut.',
 	],
+	mine: [
+		'Fresh pick marks on a face that was left years ago.',
+		'A lamp hangs on a nail, still lit.',
+		'Tapping from further in, then silence.',
+		'Footprints in the dust, and something with too many legs.',
+		'A cart on the rails, half full of fresh ore.',
+		'The props here have been chewed.',
+	],
 	intact: [
 		'A mug of coffee, still hot.',
 		'Footsteps on the deck above.',
@@ -215,6 +232,13 @@ const TRAPS: Record<Kind, string[]> = {
 		'A loose stair throws you down.',
 		'A bell on a string rings somewhere further in.',
 	],
+	mine: [
+		'A prop cracks and the roof drops a shower of stone.',
+		'The floor gives way into an old shaft.',
+		'A tripwire sets off a charge somewhere behind you.',
+		'Bad air. Lamps dim, and heads start to swim.',
+		'A cart comes down the rails out of the dark.',
+	],
 	intact: [
 		'A camera turns to follow you.',
 		'The hatch seals behind you and the air starts to cycle.',
@@ -234,6 +258,7 @@ const QUIET: Record<Kind, string[]> = {
 	building: ['Empty. The fire has burnt low.', 'Quiet, apart from the house settling.', 'Nobody here. Someone will be back soon.'],
 	crypt: ['Empty and quiet. Take a breath.', 'Quiet. Whatever was here has gone.', 'Nothing stirs. You could rest here a while.'],
 	keep: ['Empty and quiet. Take a breath.', 'Quiet. Whatever was here has gone.', 'Nothing stirs. You could rest here a while.'],
+	mine: ['Dark and still. Water drips somewhere.', 'Quiet, apart from the rock settling.', 'Nobody here. You could rest a while.'],
 	intact: ['Nobody here. The lights hum.', 'Empty, and tidy. Someone will be back.', 'Quiet, apart from the air.'],
 	derelict: ['Dark, cold and empty.', 'Nothing but drifting debris.', 'The air is thin, but it holds.'],
 };

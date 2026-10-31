@@ -8,9 +8,9 @@ import type { GenResult } from './ship/generate';
 import { CORRIDOR, FIRST_ROOM, GRID_H, GRID_W, VOID, canonicalEdge, cellAt, idx, newDeck, stampSize, stampCells, type Deck, type DoorKind, type Side, type StampKind } from './ship/model';
 
 export type DungeonSize = 'lair' | 'dungeon' | 'deep';
-export type DungeonKind = 'crypt' | 'keep';
+export type DungeonKind = 'crypt' | 'keep' | 'mine';
 export const DUNGEON_SIZES: DungeonSize[] = ['lair', 'dungeon', 'deep'];
-export const DUNGEON_KINDS: DungeonKind[] = ['crypt', 'keep'];
+export const DUNGEON_KINDS: DungeonKind[] = ['crypt', 'keep', 'mine'];
 
 const SW = 12, SH = 10, O = 8; // slot size in cells, and where the first slot starts
 const YARD = 8; // the keep's yard, a palette's ninth tint
@@ -168,6 +168,64 @@ const KEEP: Record<string, Role> = {
 	},
 };
 
+const MINE: Record<string, Role> = {
+	entry: {
+		names: ['Mine mouth', 'Adit'], w: [4, 6], h: [4, 5], tint: 0,
+		say: ['A timbered mouth in the hillside. The first props are sound; the ones further in are not.', 'Rails come out of the dark and stop at a tipped-over cart.', 'A tally board by the way in, every peg still hanging on the "in" side.'],
+		fit: (f) => { f.mid('rack', f.head); f.scatter('barrel', 1); if (chance(f.r, 0.5)) f.scatter('rubble', 1); },
+	},
+	face: {
+		names: ['Working face', 'Old face', 'East drift', 'West drift', 'Low drift'], w: [4, 7], h: [4, 6], tint: 3,
+		say: ['Pick marks all over the rock, and a seam that runs out at shoulder height.', 'Spoil heaped against one wall, ready for a cart that never came.', 'The face was left half cut. A pick is still stuck in it.'],
+		fit: (f) => { f.scatter('rubble', int(f.r, 2, 3)); f.mid('rack', f.head); if (chance(f.r, 0.4)) f.scatter('barrel', 1); },
+	},
+	gallery: {
+		names: ['Pillar gallery', 'Long gallery'], w: [7, 10], h: [6, 8], tint: 2, round: true,
+		say: ['They cut the whole seam out and left columns of rock to hold up the roof.', 'A wide room of pillars. Somebody has been robbing ore from them, and the roof has noticed.', 'Pillars of raw rock in rows, each one chalked with a number.'],
+		fit: (f) => { f.pillars(); f.scatter('rubble', 1); f.scatter('barrel', 1); },
+	},
+	sump: {
+		names: ['Sump', 'Flooded working'], w: [5, 7], h: [5, 6], tint: 4,
+		say: ['Water gathers here from the whole mine. The pump that kept it down is broken.', 'Black water to the knee, and something moving under it.', 'A sump with a hand pump. Bubbles come up in the middle now and then.'],
+		fit: (f) => { f.centre('well'); f.scatter('barrel', 1); },
+	},
+	winch: {
+		names: ['Winch room', 'Shaft head'], w: [5, 7], h: [4, 6], tint: 5,
+		say: ['A great wooden drum and a cable running down into a shaft. The cable is cut.', 'The winch that lifted the ore. The brake is off and the bucket is at the bottom.', 'A shaft in the floor with a windlass over it. Cold air comes up.'],
+		fit: (f) => { f.centre('well'); f.mid('table', f.head); f.scatter('rack', 1); },
+	},
+	store: {
+		names: ['Powder store', 'Tool store'], w: [4, 6], h: [4, 5], tint: 6, door: 'bars',
+		say: ['Kegs of blasting powder behind a grille. A sign says no flame past this point.', 'Picks, shovels and lamp oil, all in order, all left behind.', 'The store was broken open. Half the powder is gone.'],
+		fit: (f) => { f.along('barrel', f.head); f.scatter('chest', 1); },
+	},
+	bunks: {
+		names: ["Miners' bunks", 'Bunk cave'], w: [5, 7], h: [4, 6], tint: 7,
+		say: ['Bunks cut into the rock, a blanket still on every one.', 'They slept down here to save the climb. Boots by every bunk.', 'A cold stove, a pot of something, and cards on the table.'],
+		fit: (f) => { f.along('bed', f.head, 2); f.centre('table'); f.scatter('brazier', 1); },
+	},
+	shrine: {
+		names: ["Miners' shrine", 'Lamp shrine'], w: [4, 6], h: [4, 5], tint: 5,
+		say: ['A niche with a little carved figure, and lamps left burning for it.', 'Offerings of ore on a shelf of rock: one bright nugget from every shift.', 'The miners asked the mountain for leave here. Someone still does.'],
+		fit: (f) => { f.mid('altar', f.head); f.ends('brazier', f.head); },
+	},
+	collapse: {
+		names: ['Cave-in', 'Fallen drift'], w: [4, 6], h: [4, 6], tint: 3,
+		say: ['The roof came down here. Props stick out of the fall like broken ribs.', 'A crawlway has been dug through the fall, recently.', 'Dust still settles from a fall that cannot be very old.'],
+		fit: (f) => { f.scatter('rubble', int(f.r, 4, 6)); if (chance(f.r, 0.5)) f.scatter('bones', 1); },
+	},
+	cavern: {
+		names: ['Breakthrough', 'Natural cave'], w: [6, 9], h: [5, 7], tint: 1, round: true,
+		say: ['The miners broke through into a cave nobody had dug. The walls glitter.', 'A cave older than the mine, with paintings on the walls in red earth.', 'The drift opens into a cavern. Water drips, and something answers the echo.'],
+		fit: (f) => { f.scatter('rubble', int(f.r, 2, 3)); f.scatter('statue', 1); f.scatter('bones', 1); },
+	},
+	lode: {
+		names: ['The deep lode', 'Mother lode'], w: [7, 10], h: [6, 8], tint: 6, round: true,
+		say: ['The seam they died for, thick as a man and shining in the lamp light.', 'The richest rock in the mine, and the cart by it full and never hauled up.', 'The lode runs out of the floor and up the wall. Something has been chewing at it.'],
+		fit: (f) => { f.scatter('rubble', 2); f.mid('chest', f.head); f.ends('brazier', f.head); f.scatter('barrel', 1); },
+	},
+};
+
 interface Kind {
 	roles: Record<string, Role>;
 	/** the room at the far end */
@@ -236,6 +294,34 @@ const KINDS: Record<DungeonKind, Kind> = {
 			'The deed to the land, signed and sealed.',
 		],
 	},
+	mine: {
+		roles: MINE, last: 'lode',
+		pool: ['face', 'gallery', 'sump', 'winch', 'store', 'bunks', 'face', 'collapse', 'shrine', 'cavern', 'face', 'gallery'],
+		hazards: [
+			'The props here are rotten. A loud noise brings the roof down.',
+			'Bad air pools in the low end. Lamps burn blue, then go out.',
+			'A loose plank over an old shaft.',
+			'Water is coming through the wall, faster every hour.',
+			'Firedamp. One spark and the whole drift goes up.',
+			'A cart on the rails above has its brake off.',
+			'Something has been digging its own tunnels into this one.',
+			'A forgotten charge is still set in the face, its fuse half burnt.',
+			'The floor is cracked over a hollow. It rings when you walk on it.',
+			'Bats by the thousand, and they do not like light.',
+		],
+		treasure: [
+			'A sack of ore, sorted and ready for the smelter.',
+			"The foreman's strongbox, with the last month's wages.",
+			'A nugget the size of a fist, wrapped in a rag.',
+			'A good lamp that never runs out of oil.',
+			'A survey of the mountain, with a second seam marked on it.',
+			'Raw gems in a tobacco tin.',
+			'A keg of blasting powder, still dry.',
+			"A dead miner's silver luck charm.",
+			'The claim deed, signed and witnessed.',
+			'A vein of silver anyone with a pick could take out in a day.',
+		],
+	},
 };
 
 const FAMILY = ['Ashgrove', 'Varrow', 'Kettering', 'Morne', 'Hallam', 'Corwen', 'Thale', 'Brannock', 'Vell', 'Ondry', 'Lisk', 'Harrowgate', 'Penlow', 'Strand'];
@@ -244,16 +330,39 @@ const AGO = ['forty years', 'a hundred years', 'three winters', 'a lifetime', 't
 
 function dungeonName(r: Rng, kind: DungeonKind): string {
 	const fam = pick(r, FAMILY), place = pick(r, PLACE);
+	if (kind === 'mine') return pick(r, [`The ${fam} Mine`, `${fam}'s Dig`, `The Old Workings at ${place}`, `${place} Pit`]);
 	return kind === 'crypt'
 		? pick(r, [`The ${fam} Crypt`, `${fam} Barrow`, `The Vaults under ${place}`, `The Crypt at ${place}`])
 		: pick(r, [`${fam} Keep`, `${place} Hold`, `The Keep at ${place}`, `Fort ${fam}`]);
 }
 
 function story(r: Rng, kind: DungeonKind, name: string): string {
-	const fam = /(\w+) (Crypt|Barrow|Keep)$|^Fort (\w+)$/.exec(name);
-	const who = fam?.[1] ?? fam?.[3] ?? pick(r, FAMILY);
+	const fam = /(\w+) (Crypt|Barrow|Keep|Mine)$|^Fort (\w+)$|^(\w+)'s Dig$/.exec(name);
+	const who = fam?.[1] ?? fam?.[3] ?? fam?.[4] ?? pick(r, FAMILY);
 	const ago = pick(r, AGO);
 	const p = person(r);
+	if (kind === 'mine')
+		return [
+			pick(r, [
+				`The ${who}s sank the first shaft here for silver, and the hill paid for three generations.`,
+				`Miners came from three valleys to dig the ${who} claim, back when the ore ran thick.`,
+				`The ${who} family worked this seam with hired hands and a lot of powder.`,
+			]),
+			pick(r, [
+				`The seam ran out ${ago} ago, and the mine was shut.`,
+				`A fall ${ago} ago trapped a whole shift below. They were never dug out.`,
+				`The miners walked off ${ago} ago and would not say what they broke into.`,
+				`The water came up ${ago} ago faster than the pumps could take it.`,
+			]),
+			`Now ${pick(r, ['claim jumpers work it by night and shoot at lights', 'something comes up out of the shaft after dark', 'the lower drifts are full of things that dig', 'a gang hides its loot in the old workings', 'tapping comes up from below, in the rhythm the miners used'])}.`,
+			`Hook: ${pick(r, [
+				`${p} wants proof the seam is not worked out before buying the claim.`,
+				"A trapped miner's widow will pay to bring him home.",
+				'The deed was lost in the mine, and two families both say it is theirs.',
+				`${p} found a nugget at the mouth that should not be there.`,
+				'Children dare each other to go in. One of them did not come back.',
+			])}`,
+		].join('\n\n');
 	if (kind === 'crypt')
 		return [
 			pick(r, [
@@ -431,7 +540,7 @@ export function generateDungeon(size: DungeonSize, kind: DungeonKind, seed: stri
 		used2.add(name);
 		const i = rm.id - FIRST_ROOM;
 		const notes = [pick(r, rm.role.say)];
-		if (i === far && size === 'deep') notes.push(kind === 'crypt' ? 'Stairs go on down from here, to a level not on this map.' : 'Stairs go down from here to cellars not on this map.');
+		if (i === far && size === 'deep') notes.push(kind === 'crypt' ? 'Stairs go on down from here, to a level not on this map.' : kind === 'mine' ? 'Steps cut in the rock go on down, to workings not on this map.' : 'Stairs go down from here to cellars not on this map.');
 		if (i !== 0 && hazards.length && chance(r, 0.4)) notes.push(`Hazard: ${hazards.pop()}`);
 		if (treasure.length && (i === far || (i !== 0 && chance(r, 0.35)))) notes.push(`Treasure: ${treasure.pop()}`);
 		d.key[rm.id] = { num: i + 1, name, notes: notes.join('\n') };
@@ -440,6 +549,7 @@ export function generateDungeon(size: DungeonSize, kind: DungeonKind, seed: stri
 		const end = rooms[far] as Room;
 		fitter(d, end, r, taken, near, 'S').scatter('stairs', 1);
 	}
+	if (kind === 'mine') for (const rm of rooms) hew(d, rm, r, taken, near);
 
 	const name = dungeonName(r, kind);
 	return { name, decks: [d], brief: story(r, kind, name) };
@@ -504,6 +614,25 @@ function bailey(d: Deck, rooms: Room[], first: number) {
 	door(gx, y1, 'S', 'bars');
 	door(gx + 1, y1, 'S', 'bars');
 	d.nextRoom = first + 5;
+}
+
+// A mine's rooms were dug, not built: bite runs of one to three squares out of the walls,
+// never a doorstep or a fitting, and never leave a square on its own.
+function hew(d: Deck, rm: Room, r: Rng, taken: Set<number>, near: Set<number>) {
+	const edge: [number, number][] = [];
+	for (let x = 0; x < rm.w; x++) edge.push([x, 0]);
+	for (let y = 1; y < rm.h; y++) edge.push([rm.w - 1, y]);
+	for (let x = rm.w - 2; x >= 0; x--) edge.push([x, rm.h - 1]);
+	for (let y = rm.h - 2; y > 0; y--) edge.push([0, y]);
+	let cut = false, run = 0;
+	for (const [ex, ey] of edge) {
+		if (!cut ? chance(r, 0.3) : run >= 3 || chance(r, 0.45)) { cut = !cut; run = 0; }
+		const i = idx(rm.x + ex, rm.y + ey);
+		if (cut && d.cells[i] === rm.id && !taken.has(i) && !near.has(i)) { d.cells[i] = VOID; run++; }
+	}
+	for (let y = rm.y; y < rm.y + rm.h; y++)
+		for (let x = rm.x; x < rm.x + rm.w; x++)
+			if (cellAt(d, x, y) === rm.id && !taken.has(idx(x, y)) && DIRS.every(([dx, dy]) => cellAt(d, x + dx, y + dy) !== rm.id)) d.cells[idx(x, y)] = VOID;
 }
 
 export function fitter(d: Deck, rm: Pick<Room, 'id' | 'x' | 'y' | 'w' | 'h'>, r: Rng, taken: Set<number>, near: Set<number>, head: Side): Fit {

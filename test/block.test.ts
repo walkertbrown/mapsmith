@@ -79,7 +79,7 @@ describe('roomNote', () => {
 		expect(p.problems).toEqual([]);
 		const bad = parseBlock('map: dungeon\nsize: city\nkind: swamp');
 		expect(bad.problems.join(' ')).toContain("a dungeon's size can be lair, dungeon, deep");
-		expect(bad.problems.join(' ')).toContain('kind can be crypt or keep');
+		expect(bad.problems.join(' ')).toContain('kind can be crypt, keep or mine');
 		expect(roomNote('The Vell Crypt', undefined, { num: 3, name: 'Ossuary', notes: 'Bones.\nTreasure: A cup.' }, 'Maps/Crypt.md', 'dungeon')).toContain('dungeon: "The Vell Crypt"');
 		expect(roomNote('The Vell Crypt', undefined, { num: 3, name: 'Ossuary', notes: 'Bones.\nTreasure: A cup.' }, 'Maps/Crypt.md', 'dungeon')).toContain('**Treasure:** A cup.');
 	});

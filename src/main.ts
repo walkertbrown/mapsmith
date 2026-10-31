@@ -16,7 +16,7 @@ const SIZE_TEXT: Record<string, string> = { hamlet: 'Hamlet', village: 'Village'
 const WATER_TEXT: Record<string, string> = { none: 'No water', river: 'River', coast: 'Coast', estuary: 'River mouth', lake: 'Lake' };
 const TERRAIN_TEXT: Record<string, string> = { flat: 'Flat', hills: 'Hills', mountains: 'Mountains' };
 const SHIP_TEXT: Record<string, string> = { shuttle: 'Shuttle', corvette: 'Corvette', freighter: 'Freighter', station: 'Station' };
-const DUNGEON_TEXT: Record<string, string> = { lair: 'Lair', dungeon: 'Dungeon', deep: 'Deep', crypt: 'Crypt', keep: 'Keep' };
+const DUNGEON_TEXT: Record<string, string> = { lair: 'Lair', dungeon: 'Dungeon', deep: 'Deep', crypt: 'Crypt', keep: 'Keep', mine: 'Mine' };
 const BUILDING_TEXT: Record<string, string> = { inn: 'Inn', tavern: 'Tavern', shop: 'Shop', smithy: 'Smithy', temple: 'Temple', guild: 'Guildhall', bathhouse: 'Bathhouse', library: 'Library', barracks: 'Barracks', stables: 'Stables', theatre: 'Playhouse', mill: 'Mill' };
 
 /** Where a VTT key is checked, and mailed again. The only places the plugin goes online. */
@@ -320,8 +320,8 @@ class TownMap extends MarkdownRenderChild {
 		const dark = document.body.hasClass('theme-dark');
 		const pal = dark ? DUNGEON_DARK : DUNGEON_LIGHT;
 		const id = `ms${hashSeed(`${o.seed}:${o.size}:${o.kind}`).toString(36)}`;
-		// a keep stands in the open, so only a crypt gets rock round it
-		this.drawPlan(root, s, deck, 'What happened here', o.kind === 'crypt' ? pal : { ...pal, rock: undefined }, id, 'dungeon', solo);
+		// a keep stands in the open; a crypt and a mine are cut into rock
+		this.drawPlan(root, s, deck, 'What happened here', o.kind !== 'keep' ? pal : { ...pal, rock: undefined }, id, 'dungeon', solo);
 	}
 
 	drawBuilding(root: HTMLElement, o: BuildingOptions, problems: string[]) {

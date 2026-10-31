@@ -28,8 +28,8 @@ describe('dungeons', () => {
 	});
 
 	it('can walk to every room, never parks a fitting in a doorway, and keeps the best for last', () => {
-		for (let i = 0; i < 40; i++) {
-			const kind = DUNGEON_KINDS[i % 2] ?? 'crypt', size = DUNGEON_SIZES[i % 3] ?? 'lair';
+		for (let i = 0; i < 45; i++) {
+			const kind = DUNGEON_KINDS[i % 3] ?? 'crypt', size = DUNGEON_SIZES[Math.floor(i / 3) % 3] ?? 'lair';
 			const g = generateDungeon(size, kind, `seed ${i}`);
 			const d = g.decks[0];
 			if (!d) throw new Error('level missing');
@@ -67,5 +67,18 @@ describe('dungeons', () => {
 		const secret = Array.from({ length: 30 }, (_, i) => generateDungeon('dungeon', 'crypt', `s${i}`).decks[0]?.doors.some((k) => k.kind === 'secret'));
 		expect(secret.filter(Boolean).length).toBeGreaterThan(3);
 		expect(secret.filter((x) => !x).length).toBeGreaterThan(3);
+	});
+});
+
+describe('mines', () => {
+	it('end at the lode, with a story of their own', () => {
+		for (let i = 0; i < 12; i++) {
+			const g = generateDungeon(DUNGEON_SIZES[i % 3] ?? 'lair', 'mine', `m${i}`);
+			const names = keyEntries(g.decks[0]!).map((e) => e.name);
+			expect(names[0]).toMatch(/^(Mine mouth|Adit)$/);
+			expect(names.some((n) => /^(The deep lode|Mother lode)$/.test(n))).toBe(true);
+			expect(g.name).toMatch(/Mine$|Dig$|Workings at |Pit$/);
+			expect(g.brief).toMatch(/seam|shaft|miners|ore|claim/);
+		}
 	});
 });

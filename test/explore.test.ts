@@ -8,7 +8,7 @@ import { cellAt, keyEntries, sideDelta } from '../src/ship/model';
 import { renderDeck } from '../src/ship/svg';
 import { toString } from '../src/render';
 
-const deckOf = (seed: string, kind: 'crypt' | 'keep' = 'crypt') => generateDungeon('dungeon', kind, seed).decks[0]!;
+const deckOf = (seed: string, kind: 'crypt' | 'keep' | 'mine' = 'crypt') => generateDungeon('dungeon', kind, seed).decks[0]!;
 
 describe('solo play', () => {
 	it('starts in room 1 with only its doors leading on', () => {
@@ -27,7 +27,7 @@ describe('solo play', () => {
 	});
 
 	it('reaches every room through open doors', () => {
-		for (const kind of ['crypt', 'keep'] as const)
+		for (const kind of ['crypt', 'keep', 'mine'] as const)
 			for (const seed of ['one', 'two', 'three', 'four', 'five', 'six']) {
 				const d = deckOf(seed, kind);
 				let been = [1];
@@ -83,11 +83,13 @@ describe('solo play', () => {
 
 	it('rolls the same thing every time for a room, from lists of its own for each kind', () => {
 		expect(onEntering('a', 'crypt', 'dungeon', 3)).toBe(onEntering('a', 'crypt', 'dungeon', 3));
-		const seen = (kind: 'crypt' | 'keep') => new Set(Array.from({ length: 200 }, (_, i) => onEntering(`s${i}`, kind, 'deep', 2)));
-		const crypt = seen('crypt'), keep = seen('keep');
+		const seen = (kind: 'crypt' | 'keep' | 'mine') => new Set(Array.from({ length: 200 }, (_, i) => onEntering(`s${i}`, kind, 'deep', 2)));
+		const crypt = seen('crypt'), keep = seen('keep'), mine = seen('mine');
 		expect(crypt.size).toBeGreaterThan(20);
 		expect(keep.size).toBeGreaterThan(20);
-		for (const t of [...crypt, ...keep]) expect(t).toMatch(/^[A-Z][^#]*\.$/);
+		expect(mine.size).toBeGreaterThan(20);
+		expect([...mine].some((t) => crypt.has(t) || keep.has(t))).toBe(false);
+		for (const t of [...crypt, ...keep, ...mine]) expect(t).toMatch(/^[A-Z][^#]*\.$/);
 		// a deep dungeon's foes come two or more at a time
 		expect([...crypt].some((t) => /^(Two|Three|Four|Five|Six) /.test(t))).toBe(true);
 		expect([...crypt].some((t) => /^A skeleton climbs/.test(t))).toBe(false);
