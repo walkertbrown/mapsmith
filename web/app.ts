@@ -30,8 +30,13 @@ requestUrl.reply = async (r) => {
 	return { status: res.status, json: await res.json().catch(() => null) };
 };
 
+// A map's link carries its block in the address, as #map=dungeon&seed=penlow&kind=crypt.
+const toHash = (body: string) => '#' + new URLSearchParams(body.split('\n').map((l) => /^\s*([\w-]+)\s*:\s*(.*?)\s*$/.exec(l)).filter((m): m is RegExpExecArray => !!m).map((m) => [m[1]!, m[2]!])).toString();
+const fromHash = (h: string) => [...new URLSearchParams(h.replace(/^#/, ''))].filter(([k]) => /^[\w-]+$/.test(k)).map(([k, v]) => `${k}: ${v.replace(/[\n`]/g, ' ')}`).join('\n');
+const linked = fromHash(location.hash);
+
 const app = new App();
-app.notes.set(NOTE, { path: NOTE, content: load().block ?? fence(BLOCKS.town!) });
+app.notes.set(NOTE, { path: NOTE, content: linked.includes('seed:') ? fence(linked) : load().block ?? fence(BLOCKS.town!) });
 const plugin = new MapsmithPlugin(app as never, { id: 'mapsmith' } as never);
 const p = plugin as never as { data: unknown; saveData: (d: unknown) => Promise<void>; settings: { key: string; vtt: boolean }; checkKey(): Promise<string>; mailKey(e: string): Promise<string>; codeBlocks: Record<string, Proc> };
 p.data = load().data ?? null;
@@ -65,13 +70,18 @@ const download = (name: string, data: BlobPart, type: string) => {
 };
 
 let proc: Proc;
+const body = () => {
+	const info = ctx.getSectionInfo();
+	return note().split('\n').slice(info.lineStart + 1, info.lineEnd).join('\n');
+};
 const draw = () => {
 	const info = ctx.getSectionInfo();
 	board.replaceChildren();
 	const el = board.createDiv();
 	proc(note().split('\n').slice(info.lineStart + 1, info.lineEnd).join('\n'), el, ctx);
-	if (document.activeElement !== source) source.value = note().split('\n').slice(info.lineStart + 1, info.lineEnd).join('\n');
+	if (document.activeElement !== source) source.value = body();
 	store({ block: note() });
+	history.replaceState(null, '', toHash(body()));
 	const kind = /^map:\s*(\w+)/m.exec(note())?.[1] ?? 'town';
 	for (const b of document.querySelectorAll<HTMLButtonElement>('[data-map]')) b.classList.toggle('mod-cta', b.dataset.map === kind);
 	if (app.active && app.active !== NOTE) {
@@ -112,6 +122,17 @@ void (async () => {
 	source.addEventListener('input', () => {
 		app.notes.get(NOTE)!.content = fence(source.value);
 		draw();
+	});
+	$('#copy-link').addEventListener('click', () => {
+		const b = $<HTMLButtonElement>('#copy-link');
+		void navigator.clipboard.writeText(location.href).then(
+			() => { b.textContent = 'Link copied'; setTimeout(() => (b.textContent = 'Copy link to this map'), 2500); },
+			() => new Notice(`This map's link: ${location.href}`),
+		);
+	});
+	addEventListener('hashchange', () => {
+		const b = fromHash(location.hash);
+		if (b.includes('seed:') && b !== body()) { app.notes.get(NOTE)!.content = fence(b); draw(); }
 	});
 	$('#save-note').addEventListener('click', () => {
 		if (app.active) download(app.active, app.notes.get(app.active)?.content ?? '', 'text/markdown');
