@@ -6,6 +6,8 @@ A map generator for TTRPGs: fantasy towns and the country around them, dungeons 
 
 [Try it in your browser](https://bulkhead.bananafest-destiny.com/press/mapsmith/): the plugin's own code, drawing in a stand-in note.
 
+Mapsmith is free. [Mapsmith Pro](#pro), $6 once, saves any map for Roll20 or Foundry with its walls, doors and lights.
+
 Put a `mapsmith` block in a note and you get a walled town, a river village or a harbour city, with its streets, wards, bridges, gates, docks, fields and woods. The same seed always draws the same town, so a map in your campaign notes never changes under you.
 
 Every map has numbered places: the market, the temple, the inn, the smithy, the harbour and more. Click a number, or the building it sits on, to see the place's name, who keeps it, what it's like and a hook to start trouble with. **Open its note** writes a note for that place, in a folder named after the town, so you can keep writing about it. Every building gets a plan of its inside in that note too (see Inside buildings below), the keep gets a small keep to explore, and a temple has a crypt under it.
@@ -159,7 +161,11 @@ Every map is painted: grass, cobbles and water in a town; flagstones, rock and p
 
 ## Pro
 
-Everything above is free. [Mapsmith Pro](https://bananafestdestiny.itch.io/mapsmith-pro) is a one-time payment of $6 on itch. It adds a **Save for virtual tabletop** button under every town, region, dungeon, ship and building plan. It writes a Universal VTT file (`.dd2vtt`) beside your note: the map as your players should see it, with no numbers and secret doors drawn as plain wall, plus the walls, doors, windows and lights already placed. In a town every building and the town wall are walls and the gates are doors, on a grid of five metres a square (ten on a large town or city). A region is saved as an overland map with the place names on it, a kilometre a square, for travel. Roll20 imports it as it is, and Foundry reads it with the Universal Battlemap Importer module.
+Everything above is free. [Mapsmith Pro](https://bananafestdestiny.itch.io/mapsmith-pro) is a one-time payment of $6 on itch. It adds a **Save for virtual tabletop** button under every town, region, dungeon, ship and building plan. It writes a Universal VTT file (`.dd2vtt`) beside your note: the map as your players should see it, with no numbers and secret doors drawn as plain wall, plus the walls, doors, windows and lights already placed.
+
+![A crypt saved with Pro: the players' map with its walls drawn in red and its doors in blue, as a virtual tabletop reads them](docs/pro.jpg)
+
+In a town every building and the town wall are walls and the gates are doors, on a grid of five metres a square (ten on a large town or city). A region is saved as an overland map with the place names on it, a kilometre a square, for travel. Roll20 imports it as it is, and Foundry reads it with the Universal Battlemap Importer module.
 
 After you buy, copy your download page's address. Paste it into Mapsmith's settings under **Pro key** and press **Check**. Pro stays on in that vault from then on. Lost it? Type the email you bought with under **Lost your key?**.
 
