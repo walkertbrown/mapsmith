@@ -3,6 +3,7 @@ import { parseBlock, regionNote, setKey } from '../src/block';
 import { generateRegion, renderRegion, siteBlock } from '../src/region';
 import { toString } from '../src/render';
 import { townPaint } from '../src/paint';
+import { gridPixels, regionUvttData } from '../src/vtt';
 
 const SEEDS = ['saltmarch', 'oakford', 'greyfell', 'dunmere', 'ashwick', 'penlow'];
 
@@ -69,5 +70,16 @@ describe('region maps', () => {
 		const t0 = performance.now();
 		for (const seed of SEEDS) toString(renderRegion(generateRegion({ seed, terrain: 'mountains' }), { paint: townPaint(false) }));
 		expect((performance.now() - t0) / SEEDS.length).toBeLessThan(1500);
+	});
+
+	it('saves for a virtual tabletop as open country, a square a kilometre, with no numbers', () => {
+		const R = generateRegion({ seed: 'oakford' });
+		const u = regionUvttData(R, 0);
+		expect(u.resolution.map_size).toEqual({ x: 40, y: 40 });
+		expect(u.line_of_sight).toEqual([]);
+		expect(gridPixels(40, 40)).toBe(70);
+		const players = toString(renderRegion(R, { labels: false }));
+		expect(players).not.toContain('mapsmith-badge');
+		expect(players).toContain(R.sites[0]!.name);
 	});
 });

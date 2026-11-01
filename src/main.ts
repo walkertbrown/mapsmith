@@ -12,7 +12,7 @@ import { DUNGEON_DARK, DUNGEON_LIGHT, SHIP_DARK, SHIP_LIGHT, renderDeck, type Sh
 import { buildingPaint, dungeonPaint, shipPainted, townPaint } from './paint';
 import { SIZES, TERRAINS, WATERS, generateTown, type Place, type Town } from './town';
 import { onTheWay, walk } from './townplay';
-import { gridPixels, svgToPng, townMetres, townUvttData, uvttData, type UVTT } from './vtt';
+import { gridPixels, regionUvttData, svgToPng, townMetres, townUvttData, uvttData, type UVTT } from './vtt';
 
 const SIZE_TEXT: Record<string, string> = { hamlet: 'Hamlet', village: 'Village', town: 'Town', 'large-town': 'Large town', city: 'City' };
 const WATER_TEXT: Record<string, string> = { none: 'No water', river: 'River', coast: 'Coast', estuary: 'River mouth', lake: 'Lake' };
@@ -300,6 +300,16 @@ class TownMap extends MarkdownRenderChild {
 			li.createSpan({ cls: 'mapsmith-key-name', text: s.name });
 			li.createSpan({ cls: 'mapsmith-key-label', text: s.label });
 			return li;
+		});
+		const vtt = root.createDiv({ cls: 'mapsmith-tools' }).createEl('button', { text: 'Save for virtual tabletop' });
+		vtt.addEventListener('click', () => {
+			vtt.disabled = true;
+			// the players' map: the names but no numbers, one square a kilometre
+			const pic = renderRegion(R, { palette: LIGHT, labels: false, paint: plain ? undefined : townPaint(false) });
+			this.plugin
+				.saveVtt(regionUvttData(R, 0), pic, R.name, this.ctx.sourcePath, ' One square is a kilometre.')
+				.catch((e: unknown) => new Notice(`Could not save the VTT file: ${e instanceof Error ? e.message : String(e)}`))
+				.finally(() => (vtt.disabled = false));
 		});
 		this.pickable(svg, items, (i) => {
 			card.empty();

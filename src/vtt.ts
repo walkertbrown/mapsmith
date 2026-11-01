@@ -5,6 +5,7 @@ import { bounds, Deck, sideDelta, stampSize, vttWalls } from './ship/model';
 import { blocksSight } from './ship/stamps';
 import { add, dist, mean, norm, scale, segDist, sub, type Pt as P } from './geom';
 import type { Town } from './town';
+import type { Region } from './region';
 
 interface Pt {
 	x: number;
@@ -124,6 +125,20 @@ export function townUvttData(t: Town, pixelsPerGrid: number): UVTT {
 		line_of_sight,
 		objects_line_of_sight: [],
 		portals,
+		environment: { baked_lighting: false, ambient_light: 'ffffffff' },
+		lights: [],
+		image: '',
+	};
+}
+
+/** A region for a virtual tabletop: an overland map, one square a kilometre, open country with no walls. */
+export function regionUvttData(R: Region, pixelsPerGrid: number): UVTT {
+	return {
+		format: 0.3,
+		resolution: { map_origin: { x: 0, y: 0 }, map_size: { x: R.km, y: Math.round((R.km * R.h) / R.w) }, pixels_per_grid: pixelsPerGrid },
+		line_of_sight: [],
+		objects_line_of_sight: [],
+		portals: [],
 		environment: { baked_lighting: false, ambient_light: 'ffffffff' },
 		lights: [],
 		image: '',
