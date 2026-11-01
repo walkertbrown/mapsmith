@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mapsmith: fantasy town, dungeon and ship map generator</title>
+<meta name="description" content="Free map generator for tabletop games: walled towns, the country around them, dungeons, spaceships and the inside of every building, from a seed. Save a picture free, or a .dd2vtt with walls and doors for Foundry and Roll20.">
+<link rel="canonical" href="https://bulkhead.bananafest-destiny.com/mapsmith/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Mapsmith: fantasy town, dungeon and ship map generator">
+<meta property="og:description" content="Towns, regions, dungeons, ships and building plans from a seed, in your browser. Free pictures; walls and doors for Foundry and Roll20 with Pro.">
+<meta property="og:image" content="https://bulkhead.bananafest-destiny.com/fantasy-town-map-generator/town-walls.jpg">
+<meta property="og:url" content="https://bulkhead.bananafest-destiny.com/mapsmith/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./styles.css">
+<style>
+/* Obsidian's theme variables, enough for the plugin's CSS to look right */
+:root {
+	--background-primary: #fff;
+	--background-secondary: #f2f3f5;
+	--background-modifier-border: #e0e0e0;
+	--interactive-accent: #7852ee;
+	--interactive-normal: #f2f3f5;
+	--text-normal: #222;
+	--text-muted: #666;
+	--text-accent: #7852ee;
+	--text-error: #c0392b;
+	--text-on-accent: #fff;
+	--font-ui-small: 13px;
+	--font-semibold: 600;
+	--radius-s: 4px;
+	--radius-m: 8px;
+}
+:root[data-theme="dark"] {
+	--background-primary: #1e1e1e;
+	--background-secondary: #262626;
+	--background-modifier-border: #3a3a3a;
+	--interactive-accent: #a882ff;
+	--interactive-normal: #363636;
+	--text-normal: #dadada;
+	--text-muted: #999;
+	--text-accent: #a882ff;
+	--text-error: #ff8a80;
+}
+html, body { margin: 0; background: var(--background-primary); color: var(--text-normal); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; }
+@media (max-width: 860px) { .wrap { grid-template-columns: 1fr; } }
+h1 { font-size: 1.3em; margin: 0 0 4px; }
+p.lede { color: var(--text-muted); margin: 0 0 14px; }
+button, select { font: inherit; font-size: 14px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--background-modifier-border); background: var(--interactive-normal); color: var(--text-normal); cursor: pointer; }
+button.mod-cta { background: var(--interactive-accent); color: var(--text-on-accent); border-color: transparent; }
+textarea { width: 100%; box-sizing: border-box; height: 150px; font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; background: var(--background-secondary); color: var(--text-normal); border: 1px solid var(--background-modifier-border); border-radius: 6px; padding: 8px; }
+pre { white-space: pre-wrap; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; color: var(--text-muted); }
+aside h2 { font-size: 0.95em; margin: 14px 0 6px; }
+.get { border: 1px solid var(--background-modifier-border); border-radius: 8px; padding: 10px 12px; margin: 14px 0 0; font-size: 14px; }
+.get p { margin: 0 0 8px; }
+.get p:last-child { margin: 0; }
+a { color: var(--text-accent); }
+.kinds{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.kinds button{padding:6px 12px}
+nav.top{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px;margin:0 0 10px}
+input{font:inherit;font-size:14px;padding:5px 8px;border-radius:6px;border:1px solid var(--background-modifier-border);background:var(--background-primary);color:var(--text-normal);width:100%;box-sizing:border-box;margin:0 0 6px}
+.said{font-size:13px;color:var(--text-muted);margin:4px 0 0}
+details{margin:14px 0 0;font-size:14px}
+summary{cursor:pointer;font-weight:600}
+footer{max-width:1180px;margin:0 auto;padding:0 16px 40px;font-size:13px;color:var(--text-muted)}
+#notice { position: fixed; right: 16px; bottom: 16px; max-width: min(420px, calc(100vw - 32px)); background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 8px; padding: 10px 14px; font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.18); z-index: 10; }
+</style>
+<script src="https://pulse.bananafest-destiny.com/p.js" data-site="bulkhead.bananafest-destiny.com" defer></script>
+</head>
+<body>
+<div class="wrap">
+	<main>
+		<nav class="top"><a href="/">Bulkhead</a><a href="/fantasy-town-map-generator/">Towns for Foundry and Roll20</a><a href="/maps/">Free maps</a></nav>
+		<h1>Mapsmith</h1>
+		<p class="lede">Maps for your table from a seed: a walled town, the country around it, a dungeon, a spaceship, or the inside of a building. Click a number to see what's there and who keeps it. The bar over the map changes it, and the buttons under it save it.</p>
+		<div class="kinds"><button data-map="town">Town</button><button data-map="region">Region</button><button data-map="dungeon">Dungeon</button><button data-map="ship">Ship</button><button data-map="building">Inside a building</button></div>
+		<div id="board"></div>
+		<div id="notes" class="get" hidden><p><b>The place's note</b> <button id="save-note">Download it</button></p><pre id="made"></pre></div>
+	</main>
+	<aside>
+		<button id="theme">Light / dark</button>
+		<div class="get">
+			<p><b>Save as picture</b> is free: a PNG of the players' map, no numbers, named with its size in squares so Owlbear Rodeo lines up the grid.</p>
+			<p><b>Mapsmith Pro</b>, $6 once on <a href="https://bananafestdestiny.itch.io/mapsmith-pro">itch</a>: <b>Save for virtual tabletop</b> writes a .dd2vtt with every wall, door, window and light placed. Roll20 imports it as it is; Foundry reads it with the Universal Battlemap Importer module. One key works here and in the Obsidian plugin.</p>
+			<form id="key-form"><input id="key" placeholder="Your itch download page address, or its key" autocomplete="off"><button class="mod-cta">Check my key</button></form>
+			<p class="said" id="key-said"></p>
+			<p id="pro-on" hidden><b>Pro is on in this browser.</b></p>
+			<details><summary>Lost your key?</summary><form id="mail-form"><input id="mail" type="email" placeholder="The email you bought it with"><button>Mail my key</button></form><p class="said" id="mail-said"></p></details>
+		</div>
+		<div class="get">
+			<p><b>Keep your campaign in Obsidian?</b> Mapsmith is a free plugin there too, and the map lives in your note: Settings, Community plugins, Browse, search <b>Mapsmith</b>. <a href="https://community.obsidian.md/plugins/mapsmith">See it in Obsidian's list</a>.</p>
+		</div>
+		<details><summary>The seed and settings</summary><p class="said">The map is drawn from these lines. The same seed always draws the same map; change any word to get another.</p><textarea id="source" spellcheck="false"></textarea></details>
+	</aside>
+</div>
+<footer><p>Your map and key stay in this browser. The page goes online only to check a Pro key or mail one. Mapsmith is open source (MIT). Made by Bananafest Destiny. The code was written with AI, and the textures under the maps came from an image generator; the maps are drawn by code.</p></footer>
+<div id="notice" role="status" hidden></div>
+<script src="./app.js"></script>
+</body>
+</html>

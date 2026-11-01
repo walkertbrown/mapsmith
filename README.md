@@ -4,7 +4,7 @@ A map generator for TTRPGs: fantasy towns and the country around them, dungeons 
 
 ![A Mapsmith town on a river mouth with hills behind it, the temple picked and its card below](docs/demo.png)
 
-[Try it in your browser](https://bulkhead.bananafest-destiny.com/press/mapsmith/): the plugin's own code, drawing in a stand-in note.
+No Obsidian? [Mapsmith runs in your browser too](https://bulkhead.bananafest-destiny.com/mapsmith/): the same maps and the same saves, and one Pro key works in both.
 
 Mapsmith is free. [Mapsmith Pro](#pro), $6 once, saves any map for Roll20 or Foundry with its walls, doors and lights.
 
