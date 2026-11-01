@@ -63,6 +63,8 @@ terrain: hills
 ```
 ````
 
+![A region on the coast: a city at the river mouth picked, towns and villages along the river and the shore, and a ruined keep, two barrows and a mine out in the hills](docs/region.png)
+
 | Key | What it does |
 | --- | --- |
 | `water` | `river`, `coast` (the sea along one side, and a river running into it) or `none` |

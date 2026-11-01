@@ -551,16 +551,16 @@ export function renderRegion(R: Region, o: RegionRender = {}): Node {
 	const seg = (5 / R.km) * W, x0 = 30, y0 = H - 34;
 	const bar: Node[] = [];
 	for (let i = 0; i < 2; i++) bar.push(el('rect', { x: f(x0 + i * seg), y: y0, width: f(seg), height: 6, fill: i % 2 ? P.badge : P.ink, stroke: P.ink, 'stroke-width': 1 }));
-	for (let i = 0; i <= 2; i++) bar.push(el('text', { x: f(x0 + i * seg), y: y0 - 6, 'text-anchor': 'middle' }, [String(i * 5)]));
-	bar.push(el('text', { x: f(x0 + 2 * seg + 10), y: y0 + 7 }, ['km']));
-	kids.push(g({ 'font-family': 'Georgia, serif', 'font-size': 12, fill: P.label, ...halo }, bar));
+	for (let i = 0; i <= 2; i++) bar.push(el('text', { x: f(x0 + i * seg), y: y0 - 7, 'text-anchor': 'middle' }, [String(i * 5)]));
+	bar.push(el('text', { x: f(x0 + 2 * seg + 12), y: y0 + 8 }, ['km']));
+	kids.push(g({ 'font-family': 'Georgia, serif', 'font-size': 16, fill: P.label, ...halo }, bar));
 	const c = pt(W - 50, H - 60);
 	kids.push(
 		g({}, [
 			el('circle', { cx: c.x, cy: c.y, r: 22, fill: P.badge, stroke: P.ink, 'stroke-width': 1 }),
 			el('path', { d: `M${c.x} ${c.y - 18}L${c.x + 6} ${c.y}L${c.x} ${c.y + 18}L${c.x - 6} ${c.y}Z`, fill: P.ink }),
 			el('path', { d: `M${c.x} ${c.y - 18}L${c.x + 6} ${c.y}L${c.x} ${c.y}Z`, fill: P.badgeInk }),
-			el('text', { x: c.x, y: c.y - 26, 'text-anchor': 'middle', 'font-family': 'Georgia, serif', 'font-size': 12, fill: P.label }, ['N']),
+			el('text', { x: c.x, y: c.y - 26, 'text-anchor': 'middle', 'font-family': 'Georgia, serif', 'font-size': 16, fill: P.label }, ['N']),
 		]),
 	);
 
