@@ -94,6 +94,11 @@ export class App {
 			return new TFile(path);
 		},
 		createFolder: async (path: string) => { this.folders.add(path); },
+		binaries: new Map<string, ArrayBuffer>(),
+		createBinary: async (path: string, data: ArrayBuffer) => {
+			this.vault.binaries.set(path, data);
+			return new TFile(path);
+		},
 		process: async (f: TFile, fn: (data: string) => string) => {
 			const n = this.find(f.path)!;
 			n.content = fn(n.content);
@@ -232,3 +237,9 @@ export const requestUrl = Object.assign(
 export type SettingDefinitionItem = unknown;
 
 export const normalizePath = (p: string) => p.replace(/\/+/g, '/').replace(/^\/|\/$/g, '');
+
+export function base64ToArrayBuffer(b: string): ArrayBuffer {
+	const s = atob(b), u = new Uint8Array(s.length);
+	for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+	return u.buffer;
+}

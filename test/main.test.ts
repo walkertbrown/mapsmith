@@ -119,7 +119,24 @@ describe('saving for a virtual tabletop', () => {
 
 	it('has the button under a town too', () => {
 		const { el } = setup(NOTE);
-		expect(Array.from(el.querySelectorAll('.mapsmith-tools button')).map((b) => b.textContent)).toEqual(['Save for virtual tabletop']);
+		expect(Array.from(el.querySelectorAll('.mapsmith-tools button')).map((b) => b.textContent)).toEqual(['Save as picture', 'Save for virtual tabletop']);
+	});
+
+	it('saves a picture without a key, named with its squares, and says what Pro adds', async () => {
+		const { app, el, plugin, flush } = setup(DUNGEON);
+		plugin.drawPng = async (data) => {
+			data.resolution.pixels_per_grid = 70;
+			return 'iVBORw0KGgo=';
+		};
+		Array.from(el.querySelectorAll('button')).find((b) => b.textContent === 'Save as picture')!.click();
+		await flush();
+		await flush();
+		const saved = [...app.vault.binaries.keys()];
+		expect(saved).toHaveLength(1);
+		expect(saved[0]).toMatch(/^Towns\/.+-\d+x\d+\.png$/);
+		expect(new Uint8Array(app.vault.binaries.get(saved[0]!)!)[1]).toBe(0x50);
+		expect(Notice.last).toContain('squares of 70 pixels');
+		expect(Notice.last).toContain('itch.io/mapsmith-pro');
 	});
 
 	it('turns saving on for a key the server knows, and off for one it does not', async () => {

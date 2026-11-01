@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, Plugin, PluginSettingTab, SettingDefinitionItem, TFile, normalizePath, requestUrl } from 'obsidian';
+import { App, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, Plugin, PluginSettingTab, SettingDefinitionItem, TFile, base64ToArrayBuffer, normalizePath, requestUrl } from 'obsidian';
 import { BUILDING_KINDS, CELLAR, buildingFor, generateBuilding } from './building';
 import { DUNGEON_KINDS, DUNGEON_SIZES, generateDungeon } from './dungeon';
 import { SHIP_SIZES, editBlock, newSeed, noteName, parseBlock, placeNote, regionNote, roomNote, setKey, type BuildingOptions, type DungeonOptions, type Key, type ShipOptions } from './block';
@@ -119,20 +119,58 @@ export default class MapsmithPlugin extends Plugin {
 		return r?.status === 200 ? 'If that address bought Mapsmith Pro, its key is on the way. Look in your mail in a minute.' : 'Could not ask for the key. Check the connection and try again.';
 	}
 
+	/** The two save buttons under a map: a picture, free, and a Universal VTT file with Pro. `make` draws the players' map when one is pressed. */
+	saveButtons(root: HTMLElement, sourcePath: string, make: () => { data: UVTT; svg: SvgNode; name: string; more?: string }) {
+		const tools = root.createDiv({ cls: 'mapsmith-tools' });
+		const on = (text: string, what: string, go: (m: ReturnType<typeof make>) => Promise<void>) => {
+			const b = tools.createEl('button', { text });
+			b.addEventListener('click', () => {
+				b.disabled = true;
+				Promise.resolve()
+					.then(() => go(make()))
+					.catch((e: unknown) => new Notice(`Could not save the ${what}: ${e instanceof Error ? e.message : String(e)}`))
+					.finally(() => (b.disabled = false));
+			});
+		};
+		on('Save as picture', 'picture', (m) => this.savePng(m.data, m.svg, m.name, sourcePath));
+		on('Save for virtual tabletop', 'VTT file', (m) => this.saveVtt(m.data, m.svg, m.name, sourcePath, m.more));
+	}
+
+	/** Draws `svg` at the size of the map's squares; the svg's viewBox must cover the whole of them. Gives the PNG as base64. */
+	async drawPng(data: UVTT, svg: SvgNode): Promise<string> {
+		const { x: w, y: h } = data.resolution.map_size;
+		const px = (data.resolution.pixels_per_grid = gridPixels(w, h));
+		svg.a.width = w * px;
+		svg.a.height = h * px;
+		return svgToPng(toString(svg), w * px, h * px);
+	}
+
+	/** A file beside the note, named after the map. */
+	beside(sourcePath: string, name: string, ext: string): string {
+		const at = sourcePath.lastIndexOf('/');
+		return normalizePath(`${at < 0 ? '' : sourcePath.slice(0, at + 1)}${name.replace(/[\\/:*?"<>|#^[\]]/g, '')}.${ext}`);
+	}
+
+	/** Writes the players' map as a PNG next to the note, named with its squares (Owlbear Rodeo reads them from the name). Free. */
+	async savePng(data: UVTT, svg: SvgNode, name: string, sourcePath: string) {
+		const { x: w, y: h } = data.resolution.map_size;
+		const bin = base64ToArrayBuffer(await this.drawPng(data, svg));
+		const path = this.beside(sourcePath, `${name}-${w}x${h}`, 'png');
+		const old = this.app.vault.getAbstractFileByPath(path);
+		if (old instanceof TFile) await this.app.vault.modifyBinary(old, bin);
+		else await this.app.vault.createBinary(path, bin);
+		const more = this.settings.vtt ? '' : ` To bring the walls and doors with it into Roll20 or Foundry, see Save for virtual tabletop: ${BUY}`;
+		new Notice(`Saved ${path}, ${w} by ${h} squares of ${data.resolution.pixels_per_grid} pixels.${more}`);
+	}
+
 	/** Writes a Universal VTT file next to the note: the players' map, its walls, doors and lights. */
-	/** Writes `data` with `svg` drawn in as its picture; the svg's viewBox must cover the whole of the map's squares. */
 	async saveVtt(data: UVTT, svg: SvgNode, name: string, sourcePath: string, more = '') {
 		if (!this.settings.vtt) {
 			new Notice(`Saving for a virtual tabletop needs a key. It's $6 once, on itch: ${BUY}. Then paste your key in Mapsmith's settings.`);
 			return;
 		}
-		const { x: w, y: h } = data.resolution.map_size;
-		const px = (data.resolution.pixels_per_grid = gridPixels(w, h));
-		svg.a.width = w * px;
-		svg.a.height = h * px;
-		data.image = await svgToPng(toString(svg), w * px, h * px);
-		const at = sourcePath.lastIndexOf('/');
-		const path = normalizePath(`${at < 0 ? '' : sourcePath.slice(0, at + 1)}${name.replace(/[\\/:*?"<>|#^[\]]/g, '')}.dd2vtt`);
+		data.image = await this.drawPng(data, svg);
+		const path = this.beside(sourcePath, name, 'dd2vtt');
 		const old = this.app.vault.getAbstractFileByPath(path);
 		if (old instanceof TFile) await this.app.vault.modify(old, JSON.stringify(data));
 		else await this.app.vault.create(path, JSON.stringify(data));
@@ -248,17 +286,12 @@ class TownMap extends MarkdownRenderChild {
 			if (solo && !solo.seen.has(p.n)) li.hide();
 			return li;
 		});
-		const vtt = root.createDiv({ cls: 'mapsmith-tools' }).createEl('button', { text: 'Save for virtual tabletop' });
-		vtt.addEventListener('click', () => {
-			vtt.disabled = true;
+		this.plugin.saveButtons(root, this.ctx.sourcePath, () => {
 			// the players' map: no numbers, and the squares it is cut into run past the edge to a whole one
 			const data = townUvttData(t, 0), m = townMetres(t);
 			const pic = renderTown(t, { palette: LIGHT, labels: false, paint: plain ? undefined : townPaint(false) });
 			pic.a.viewBox = `0 0 ${(data.resolution.map_size.x * m) / t.mpu} ${(data.resolution.map_size.y * m) / t.mpu}`;
-			this.plugin
-				.saveVtt(data, pic, t.name, this.ctx.sourcePath, ` One square is ${m} metres.`)
-				.catch((e: unknown) => new Notice(`Could not save the VTT file: ${e instanceof Error ? e.message : String(e)}`))
-				.finally(() => (vtt.disabled = false));
+			return { data, svg: pic, name: t.name, more: ` One square is ${m} metres.` };
 		});
 		this.pickable(svg, items, (i) => {
 			const p = i < 0 || (solo && !solo.seen.has(i + 1)) ? undefined : t.places[i];
@@ -303,16 +336,13 @@ class TownMap extends MarkdownRenderChild {
 			li.createSpan({ cls: 'mapsmith-key-label', text: s.label });
 			return li;
 		});
-		const vtt = root.createDiv({ cls: 'mapsmith-tools' }).createEl('button', { text: 'Save for virtual tabletop' });
-		vtt.addEventListener('click', () => {
-			vtt.disabled = true;
+		this.plugin.saveButtons(root, this.ctx.sourcePath, () => ({
 			// the players' map: the names but no numbers, one square a kilometre
-			const pic = renderRegion(R, { palette: LIGHT, labels: false, paint: plain ? undefined : townPaint(false) });
-			this.plugin
-				.saveVtt(regionUvttData(R, 0), pic, R.name, this.ctx.sourcePath, ' One square is a kilometre.')
-				.catch((e: unknown) => new Notice(`Could not save the VTT file: ${e instanceof Error ? e.message : String(e)}`))
-				.finally(() => (vtt.disabled = false));
-		});
+			data: regionUvttData(R, 0),
+			svg: renderRegion(R, { palette: LIGHT, labels: false, paint: plain ? undefined : townPaint(false) }),
+			name: R.name,
+			more: ' One square is a kilometre.',
+		}));
 		this.pickable(svg, items, (i) => {
 			card.empty();
 			const s = R.sites[i];
@@ -499,14 +529,11 @@ class TownMap extends MarkdownRenderChild {
 			});
 		const ship = s.name.replace(/^Derelict — /, '');
 		const deckName = s.decks.length > 1 ? deck.name : undefined;
-		const vtt = root.createDiv({ cls: 'mapsmith-tools' }).createEl('button', { text: 'Save for virtual tabletop' });
-		vtt.addEventListener('click', () => {
-			vtt.disabled = true;
-			this.plugin
-				.saveVtt(uvttData(deck, 0), renderDeck(deck, { palette, id: 'vtt', players: true }), deckName ? `${ship} ${deckName}` : ship, this.ctx.sourcePath)
-				.catch((e: unknown) => new Notice(`Could not save the VTT file: ${e instanceof Error ? e.message : String(e)}`))
-				.finally(() => (vtt.disabled = false));
-		});
+		this.plugin.saveButtons(root, this.ctx.sourcePath, () => ({
+			data: uvttData(deck, 0),
+			svg: renderDeck(deck, { palette, id: 'vtt', players: true }),
+			name: deckName ? `${ship} ${deckName}` : ship,
+		}));
 		this.pickable(svg, items, (i) => {
 			const r = i < 0 ? undefined : rooms[i];
 			this.drawRoom(card, r, ship, deckName, what, solo && r && solo.fog.rooms.has(r.id) && deck.doors.some((k) => k.kind === 'secret') ? () => solo.search(r.num) : undefined);

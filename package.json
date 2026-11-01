@@ -1,6 +1,6 @@
 {
 	"name": "mapsmith",
-	"version": "0.8.2",
+	"version": "0.9.0",
 	"description": "Mapsmith: seeded town maps you can click, drawn in your notes.",
 	"main": "main.js",
 	"type": "module",

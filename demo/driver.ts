@@ -68,6 +68,17 @@ document.querySelector('#theme')!.addEventListener('click', () => {
 	document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 	app.workspace.trigger('css-change', null);
 });
+// A picture saved in the demo downloads, the way it would land beside the note in a vault.
+const createBinary = app.vault.createBinary;
+app.vault.createBinary = async (p, data) => {
+	const f = await createBinary(p, data);
+	const a = document.createElement('a');
+	a.href = URL.createObjectURL(new Blob([data], { type: 'image/png' }));
+	a.download = p.slice(p.lastIndexOf('/') + 1);
+	a.click();
+	setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+	return f;
+};
 // Notices show on the page the way Obsidian shows them, with any address in them as a link.
 const toast = document.querySelector<HTMLElement>('#notice')!;
 let hide = 0;

@@ -159,6 +159,10 @@ Above the plan is what the place is known for, and a hook. One room in each buil
 
 Every map is painted: grass, cobbles and water in a town; flagstones, rock and planks inside; steel plate and grating on a ship, out among the stars. The textures are part of the plugin, so nothing is fetched. Add `look: plain` to any block for the flat drawing instead.
 
+## Saving a picture
+
+Every map has a **Save as picture** button under it. It writes the players' map as a PNG beside your note: no numbers, secret doors drawn as plain wall. The file is named with its size in squares, such as `The Penlow Crypt-36x39.png`, so a virtual tabletop that reads the grid from the name (Owlbear Rodeo does) lines it up for you. Free.
+
 ## Pro
 
 Everything above is free. [Mapsmith Pro](https://bananafestdestiny.itch.io/mapsmith-pro) is a one-time payment of $6 on itch. It adds a **Save for virtual tabletop** button under every town, region, dungeon, ship and building plan. It writes a Universal VTT file (`.dd2vtt`) beside your note: the map as your players should see it, with no numbers and secret doors drawn as plain wall, plus the walls, doors, windows and lights already placed.
