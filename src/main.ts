@@ -25,6 +25,8 @@ const BUILDING_TEXT: Record<string, string> = { inn: 'Inn', tavern: 'Tavern', sh
 
 /** Where a VTT key is checked, and mailed again. The only places the plugin goes online. */
 export const SERVER = 'https://bulkhead.bananafest-destiny.com';
+/** Where Mapsmith Pro is sold. */
+export const BUY = 'https://bananafestdestiny.itch.io/mapsmith-pro';
 
 interface Settings {
 	key: string;
@@ -121,7 +123,7 @@ export default class MapsmithPlugin extends Plugin {
 	/** Writes `data` with `svg` drawn in as its picture; the svg's viewBox must cover the whole of the map's squares. */
 	async saveVtt(data: UVTT, svg: SvgNode, name: string, sourcePath: string, more = '') {
 		if (!this.settings.vtt) {
-			new Notice('Saving for a virtual tabletop needs a key. Paste yours in Mapsmith\'s settings.');
+			new Notice(`Saving for a virtual tabletop needs a key. It's $6 once, on itch: ${BUY}. Then paste your key in Mapsmith's settings.`);
 			return;
 		}
 		const { x: w, y: h } = data.resolution.map_size;
@@ -569,7 +571,7 @@ class MapsmithSettingTab extends PluginSettingTab {
 		return [
 			{
 				name: 'Pro key',
-				desc: 'The address of your itch download page for Mapsmith Pro, or the key at the end of it. It turns on Save for virtual tabletop under every map: towns, ships, dungeons and the inside of buildings. Check asks this plugin\'s server once, and saving stays on after that, offline too. The key is kept in this vault\'s plugin folder.',
+				desc: 'The address of your itch download page for Mapsmith Pro, or the key at the end of it. It turns on Save for virtual tabletop under every map: towns, regions, ships, dungeons and the inside of buildings. Mapsmith Pro is $6, once, at bananafestdestiny.itch.io/mapsmith-pro. Check asks this plugin\'s server once, and saving stays on after that, offline too. The key is kept in this vault\'s plugin folder.',
 				render: (setting) => {
 					const said = setting.descEl.createDiv({ cls: 'mapsmith-said' });
 					setting
