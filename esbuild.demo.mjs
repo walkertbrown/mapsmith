@@ -35,3 +35,22 @@ copyFileSync('styles.css', new URL('styles.css', web));
 const site = readFileSync(new URL('../../public/fantasy-town-map-generator/index.html', import.meta.url), 'utf8');
 const tag = /<!-- Cloudflare Web Analytics -->.*?<!-- End Cloudflare Web Analytics -->/s.exec(site)?.[0] ?? '';
 writeFileSync(new URL('index.html', web), readFileSync('web/index.html', 'utf8').replace('</body>', `${tag}\n</body>`));
+
+// The same page for itch's browser player: no site tags, and Pro saves send you to the web version (itch's frame
+// can't reach the key server). Zipped as mapsmith-web.zip for the boss to upload.
+const itch = new URL('../../public/press/mapsmith/itch-web/', import.meta.url);
+const files = new URL('files/', itch);
+mkdirSync(files, { recursive: true });
+let page = readFileSync('web/index.html', 'utf8')
+	.replace(/<link rel="canonical"[^>]*>\n/, '<meta name="robots" content="noindex">\n')
+	.replace(/<meta property="og:[^>]*>\n/g, '')
+	.replace(/<meta name="twitter:[^>]*>\n/, '')
+	.replace(/<script src="https:\/\/pulse[^>]*><\/script>\n/, '')
+	.replace('<link rel="icon" href="/favicon.svg" type="image/svg+xml">\n', '')
+	.replace(/<nav class="top">.*?<\/nav>\n/, '')
+	.replace(/<form id="key-form">[\s\S]*?<\/details>/, '<p>Bought it? <a href="https://bulkhead.bananafest-destiny.com/mapsmith/" target="_blank" rel="noopener">Open Mapsmith on the web</a>, paste your key there, and every map saves for your tabletop. The map you have open here goes with you through Copy link.</p>')
+	.replace('<p>Your map and key stay in this browser. The page goes online only to check a Pro key or mail one.', '<p>Nothing leaves your browser; this page never goes online.');
+if (page.includes('key-form')) throw new Error('itch page still has the key form');
+writeFileSync(new URL('index.html', files), page);
+copyFileSync(new URL('../../public/mapsmith/app.js', import.meta.url), new URL('app.js', files));
+copyFileSync('styles.css', new URL('styles.css', files));

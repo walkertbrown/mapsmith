@@ -137,22 +137,24 @@ void (async () => {
 	$('#save-note').addEventListener('click', () => {
 		if (app.active) download(app.active, app.notes.get(app.active)?.content ?? '', 'text/markdown');
 	});
-	const key = $<HTMLInputElement>('#key'), said = $('#key-said');
-	key.value = p.settings.key;
-	const pro = () => { $('#pro-on').hidden = !p.settings.vtt; };
-	pro();
-	$('#key-form').addEventListener('submit', (e) => {
-		e.preventDefault();
-		p.settings.key = key.value.trim();
-		said.textContent = 'Checking…';
-		void p.checkKey().then((m) => { said.textContent = m.replace('in this vault', 'in this browser'); pro(); });
-	});
-	$('#mail-form').addEventListener('submit', (e) => {
-		e.preventDefault();
-		const m = $<HTMLInputElement>('#mail');
-		$('#mail-said').textContent = 'Asking…';
-		void p.mailKey(m.value.trim()).then((t) => { $('#mail-said').textContent = t; });
-	});
+	if (document.querySelector('#key-form')) {
+		const key = $<HTMLInputElement>('#key'), said = $('#key-said');
+		key.value = p.settings.key;
+		const pro = () => { $('#pro-on').hidden = !p.settings.vtt; };
+		pro();
+		$('#key-form').addEventListener('submit', (e) => {
+			e.preventDefault();
+			p.settings.key = key.value.trim();
+			said.textContent = 'Checking…';
+			void p.checkKey().then((m) => { said.textContent = m.replace('in this vault', 'in this browser'); pro(); });
+		});
+		$('#mail-form').addEventListener('submit', (e) => {
+			e.preventDefault();
+			const m = $<HTMLInputElement>('#mail');
+			$('#mail-said').textContent = 'Asking…';
+			void p.mailKey(m.value.trim()).then((t) => { $('#mail-said').textContent = t; });
+		});
+	}
 	const theme = (dark: boolean) => {
 		document.body.classList.toggle('theme-dark', dark);
 		document.documentElement.dataset.theme = dark ? 'dark' : 'light';
@@ -168,7 +170,7 @@ const toast = $('#notice');
 let hide = 0;
 Notice.show = (msg) => {
 	toast.replaceChildren();
-	for (const part of msg.replace(/ Then paste your key in Mapsmith's settings\./, ' Then paste your key under Mapsmith Pro on this page.').replace(/Saved Map\//, 'Saved ').split(/(https:\/\/[^\s]*[^\s.,])/)) {
+	for (const part of msg.replace(/ Then paste your key in Mapsmith's settings\./, document.querySelector('#key-form') ? ' Then paste your key under Mapsmith Pro on this page.' : ' Then open this map on the web version and paste your key there: https://bulkhead.bananafest-destiny.com/mapsmith/' + location.hash).replace(/Saved Map\//, 'Saved ').split(/(https:\/\/[^\s]*[^\s.,])/)) {
 		if (part.startsWith('https://')) {
 			const a = document.createElement('a');
 			a.href = part;
