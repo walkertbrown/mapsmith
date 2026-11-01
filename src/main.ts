@@ -1,8 +1,9 @@
 import { App, Editor, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, Plugin, PluginSettingTab, SettingDefinitionItem, TFile, normalizePath, requestUrl } from 'obsidian';
 import { BUILDING_KINDS, CELLAR, buildingFor, generateBuilding } from './building';
 import { DUNGEON_KINDS, DUNGEON_SIZES, generateDungeon } from './dungeon';
-import { SHIP_SIZES, editBlock, newSeed, noteName, parseBlock, placeNote, roomNote, setKey, type BuildingOptions, type DungeonOptions, type Key, type ShipOptions } from './block';
+import { SHIP_SIZES, editBlock, newSeed, noteName, parseBlock, placeNote, regionNote, roomNote, setKey, type BuildingOptions, type DungeonOptions, type Key, type ShipOptions } from './block';
 import { DARK, LIGHT, renderTown, toDom, toString, type Node as SvgNode } from './render';
+import { REGION_WATERS, generateRegion, renderRegion, type RegionOptions } from './region';
 import { hashSeed } from './rng';
 import { generate, type GenResult } from './ship/generate';
 import { keyEntries, type Deck, type RoomInfo } from './ship/model';
@@ -15,6 +16,8 @@ import { gridPixels, svgToPng, townMetres, townUvttData, uvttData, type UVTT } f
 
 const SIZE_TEXT: Record<string, string> = { hamlet: 'Hamlet', village: 'Village', town: 'Town', 'large-town': 'Large town', city: 'City' };
 const WATER_TEXT: Record<string, string> = { none: 'No water', river: 'River', coast: 'Coast', estuary: 'River mouth', lake: 'Lake' };
+const REGION_WATER_TEXT: Record<string, string> = { river: 'River', coast: 'Coast', none: 'Inland' };
+const SIDE_TEXT: Record<string, string> = { north: 'Sea to the north', south: 'Sea to the south', east: 'Sea to the east', west: 'Sea to the west' };
 const TERRAIN_TEXT: Record<string, string> = { flat: 'Flat', hills: 'Hills', mountains: 'Mountains' };
 const SHIP_TEXT: Record<string, string> = { shuttle: 'Shuttle', corvette: 'Corvette', freighter: 'Freighter', station: 'Station' };
 const DUNGEON_TEXT: Record<string, string> = { lair: 'Lair', dungeon: 'Dungeon', deep: 'Deep', crypt: 'Crypt', keep: 'Keep', mine: 'Mine' };
@@ -41,6 +44,11 @@ export default class MapsmithPlugin extends Plugin {
 			id: 'insert-town',
 			name: 'Insert a town map',
 			editorCallback: (editor: Editor) => editor.replaceSelection(`\`\`\`mapsmith\nseed: ${newSeed()}\nsize: town\nwater: river\n\`\`\`\n`),
+		});
+		this.addCommand({
+			id: 'insert-region',
+			name: 'Insert a region map',
+			editorCallback: (editor: Editor) => editor.replaceSelection(`\`\`\`mapsmith\nmap: region\nseed: ${newSeed()}\nwater: river\nterrain: hills\n\`\`\`\n`),
 		});
 		this.addCommand({
 			id: 'insert-ship',
@@ -159,7 +167,7 @@ class TownMap extends MarkdownRenderChild {
 		const root = this.containerEl;
 		root.empty();
 		root.addClass('mapsmith');
-		const { map, opts, ship, dungeon, building, explore: walked, plain, problems } = parseBlock(this.src);
+		const { map, opts, ship, dungeon, building, region, explore: walked, plain, problems } = parseBlock(this.src);
 		if (map === 'ship') {
 			this.drawShip(root, ship, problems, plain);
 			return;
@@ -170,6 +178,10 @@ class TownMap extends MarkdownRenderChild {
 		}
 		if (map === 'building') {
 			this.drawBuilding(root, building, problems, plain);
+			return;
+		}
+		if (map === 'region') {
+			this.drawRegion(root, region, problems, plain);
 			return;
 		}
 		const t = generateTown(opts);
@@ -249,6 +261,61 @@ class TownMap extends MarkdownRenderChild {
 		this.pickable(svg, items, (i) => {
 			const p = i < 0 || (solo && !solo.seen.has(i + 1)) ? undefined : t.places[i];
 			this.drawCard(card, t, p, solo && p && p.n > 1 ? onTheWay(t.opts.seed, p.n) : undefined);
+		});
+	}
+
+	/** The country around the towns: every settlement and ruin is numbered, and its note holds its own map. */
+	drawRegion(root: HTMLElement, o: RegionOptions, problems: string[], plain = false) {
+		const R = generateRegion(o);
+		const bar = root.createDiv({ cls: 'mapsmith-bar' });
+		const water = bar.createEl('select', { cls: 'dropdown' });
+		for (const w of REGION_WATERS) water.createEl('option', { text: REGION_WATER_TEXT[w], value: w });
+		water.value = o.water;
+		water.addEventListener('change', () => this.set('water', water.value));
+		if (o.water === 'coast') {
+			const side = bar.createEl('select', { cls: 'dropdown' });
+			for (const k of Object.keys(SIDE_TEXT)) side.createEl('option', { text: SIDE_TEXT[k], value: k });
+			side.value = o.side;
+			side.addEventListener('change', () => this.set('side', side.value));
+		}
+		const terrain = bar.createEl('select', { cls: 'dropdown' });
+		for (const k of TERRAINS) terrain.createEl('option', { text: TERRAIN_TEXT[k], value: k });
+		terrain.value = o.terrain;
+		terrain.addEventListener('change', () => this.set('terrain', terrain.value));
+		const green = o.land === 'green';
+		const land = bar.createEl('button', { text: green ? 'Green' : 'Parchment', cls: 'mapsmith-toggle' });
+		land.toggleClass('is-on', green);
+		land.addEventListener('click', () => this.set('land', green ? 'parchment' : 'green'));
+		const again = bar.createEl('button', { text: 'New region', cls: 'mod-cta' });
+		again.addEventListener('click', () => this.set('seed', newSeed()));
+		if (problems.length) root.createDiv({ cls: 'mapsmith-problem', text: problems.join('. ') + '.' });
+
+		const dark = document.body.hasClass('theme-dark');
+		const frame = root.createDiv({ cls: 'mapsmith-map' });
+		const svg = toDom(renderRegion(R, { palette: dark ? DARK : LIGHT, paint: plain ? undefined : townPaint(dark) }), frame);
+		const card = root.createDiv({ cls: 'mapsmith-card' });
+		const key = root.createEl('ol', { cls: 'mapsmith-key' });
+		const items = R.sites.map((s) => {
+			const li = key.createEl('li');
+			li.createSpan({ cls: 'mapsmith-key-name', text: s.name });
+			li.createSpan({ cls: 'mapsmith-key-label', text: s.label });
+			return li;
+		});
+		this.pickable(svg, items, (i) => {
+			card.empty();
+			const s = R.sites[i];
+			if (!s) {
+				card.createDiv({ cls: 'mapsmith-hint', text: 'Click a number to see the place. Its note has a map of the town, or of the ruin.' });
+				return;
+			}
+			const head = card.createDiv({ cls: 'mapsmith-card-head' });
+			head.createSpan({ cls: 'mapsmith-card-n', text: String(s.n) });
+			head.createSpan({ cls: 'mapsmith-card-name', text: s.name });
+			card.createDiv({ cls: 'mapsmith-card-sub', text: s.label });
+			card.createDiv({ text: s.line });
+			card.createDiv({ cls: 'mapsmith-card-sub', text: s.kind === 'settlement' ? 'Its note has a map of the town.' : 'Its note has a map of what lies inside.' });
+			const open = card.createEl('button', { text: 'Open its note' });
+			open.addEventListener('click', () => void this.plugin.openNote(R.name, noteName(s), () => regionNote(R, s, this.ctx.sourcePath), this.ctx.sourcePath));
 		});
 	}
 

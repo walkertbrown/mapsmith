@@ -1,6 +1,6 @@
 # Mapsmith
 
-A map generator for TTRPGs: fantasy towns, dungeons and spaceships from a seed, drawn right in your notes, and the inside of every building in a town.
+A map generator for TTRPGs: fantasy towns and the country around them, dungeons and spaceships from a seed, drawn right in your notes, and the inside of every building in a town.
 
 ![A Mapsmith town on a river mouth with hills behind it, the temple picked and its card below](docs/demo.png)
 
@@ -16,7 +16,7 @@ By hand: copy `main.js`, `manifest.json` and `styles.css` from the latest releas
 
 ## Use
 
-Open the command palette and run **Insert a town map**, **Insert a ship map**, **Insert a dungeon map** or **Insert the inside of a building**. Each one puts a `mapsmith` block with a new seed where your cursor is, and the map is drawn under it in reading view and live preview. The bar above each map changes it, and every change is written back into the block. Or type a block yourself, as below.
+Open the command palette and run **Insert a town map**, **Insert a region map**, **Insert a ship map**, **Insert a dungeon map** or **Insert the inside of a building**. Each one puts a `mapsmith` block with a new seed where your cursor is, and the map is drawn under it in reading view and live preview. The bar above each map changes it, and every change is written back into the block. Or type a block yourself, as below.
 
 ## The block
 
@@ -48,6 +48,30 @@ The bar above the map changes size, water, terrain, walls and land, and **New to
 The map is drawn in the colours of your theme, light or dark.
 
 Press **Explore** to play the town on your own. You know the streets but not who is where: you start at place 1 (the market, or the inn in a hamlet), and every other number is gone. A question mark sits on the nearest places to the ones you've been to; click one to walk there, and its number, name and card appear, with what happened on the way: a quiet street, a rumour, some trouble, or someone you meet. The same walk always has the same thing on it. Where you've been is written into the block, so the note remembers it.
+
+## Regions
+
+Add `map: region` for the country around your towns, about 40 km across: towns and villages along a river or the shore, roads between them that go round high ground, woods, hills, and the odd ruined keep, barrow or old mine at the end of a track.
+
+````
+```mapsmith
+map: region
+seed: saltmarch
+water: coast
+side: east
+terrain: hills
+```
+````
+
+| Key | What it does |
+| --- | --- |
+| `water` | `river`, `coast` (the sea along one side, and a river running into it) or `none` |
+| `side` | Where the sea lies: `north`, `south`, `east` or `west` |
+| `terrain` | `flat`, `hills` (the default) or `mountains` |
+| `land` | `parchment` or `green` |
+| `name` | The region's name. Leave it out and the seed picks one. |
+
+Every town, village and ruin is numbered. Click one for what it is and a line about it. **Open its note** writes a note for it in a folder named after the region, and the note has the place's own map in it: a town block drawn to match, with its size, its water and its hills, or a dungeon block for a ruin. So a region opens into its towns, a town into its buildings, and a ruin into its rooms. The bar changes the water, the sea's side, the terrain and the land, and **New region** rolls a new seed.
 
 ## Ships
 

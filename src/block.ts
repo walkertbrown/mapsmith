@@ -6,12 +6,13 @@ import { DUNGEON_KINDS, DUNGEON_SIZES, type DungeonKind, type DungeonSize } from
 import { parseExplored } from './explore';
 import type { Mood, ShipSize } from './ship/generate';
 import type { RoomInfo } from './ship/model';
+import { REGION_DEFAULTS, siteBlock, type Region, type RegionOptions, type Site } from './region';
 import { DEFAULTS, LANDS, SIDES, SIZES, TERRAINS, WATERS, type Land, type Side, type Terrain, type Size, type Town, type TownOptions, type Water, type Place } from './town';
 
 export const KEYS = ['map', 'seed', 'size', 'water', 'side', 'walls', 'land', 'terrain', 'name', 'mood', 'deck', 'kind', 'explore', 'found', 'keeper', 'look'] as const;
 export type Key = (typeof KEYS)[number];
 
-export const MAPS = ['town', 'ship', 'dungeon', 'building'] as const;
+export const MAPS = ['town', 'ship', 'dungeon', 'building', 'region'] as const;
 export type MapKind = (typeof MAPS)[number];
 export const SHIP_SIZES: ShipSize[] = ['shuttle', 'corvette', 'freighter', 'station'];
 export const MOODS: Mood[] = ['intact', 'derelict'];
@@ -48,6 +49,11 @@ export interface BuildingOptions {
 }
 
 const ALIAS: Record<string, string> = {
+	country: 'region',
+	landscape: 'region',
+	overland: 'region',
+	countryside: 'region',
+	inland: 'none',
 	house: 'building',
 	pub: 'tavern',
 	alehouse: 'tavern',
@@ -116,6 +122,8 @@ export interface Parsed {
 	ship: ShipOptions;
 	dungeon: DungeonOptions;
 	building: BuildingOptions;
+	/** the country around the towns: water is river, coast or none, and the land is hilly unless the block says */
+	region: RegionOptions;
 	/** solo play in a town: the places walked to, or null when the whole map is shown */
 	explore: number[] | null;
 	/** look: plain draws the flat plan without the painted ground */
@@ -134,6 +142,7 @@ export function parseBlock(src: string): Parsed {
 	let size = ''; // a town's sizes and a ship's differ, so it waits until the map is known
 	let explore: number[] | null = null;
 	let plain = false;
+	let terrainSet = false;
 	for (const raw of src.split('\n')) {
 		const line = raw.trim();
 		if (!line || line.startsWith('#') || line.startsWith('//')) continue;
@@ -181,6 +190,7 @@ export function parseBlock(src: string): Parsed {
 			else problems.push(`land can be ${LANDS.join(' or ')}`);
 		} else if (key === 'terrain') {
 			const v = clean(val);
+			terrainSet = true;
 			if ((TERRAINS as string[]).includes(v)) opts.terrain = v as Terrain;
 			else if (v === 'none') opts.terrain = 'flat';
 			else problems.push(`terrain can be ${TERRAINS.join(', ')}`);
@@ -209,7 +219,15 @@ export function parseBlock(src: string): Parsed {
 		if ((SIZES as string[]).includes(size)) opts.size = size as Size;
 		else problems.push(`size can be ${SIZES.join(', ')}`);
 	}
-	return { map, opts, ship, dungeon, building, explore, plain, problems };
+	const region: RegionOptions = {
+		seed: opts.seed,
+		water: opts.water === 'coast' || opts.water === 'estuary' ? 'coast' : opts.water === 'none' ? 'none' : 'river',
+		side: opts.side,
+		terrain: terrainSet ? opts.terrain : REGION_DEFAULTS.terrain,
+		land: opts.land,
+		name: opts.name,
+	};
+	return { map, opts, ship, dungeon, building, region, explore, plain, problems };
 }
 
 // The block's body with `key` set to `value`: the first line for that key is rewritten, or a line is added.
@@ -301,3 +319,30 @@ export function roomNote(ship: string, deck: string | undefined, r: RoomInfo, ma
 }
 
 export const noteName = (p: Pick<Place, 'name' | 'n'>) => p.name.replace(/[\\/:*?"<>|#^[\]]/g, '').trim() || `Place ${p.n}`;
+
+// The note a settlement or a ruin on a region map gets: what the map says, and the map of the place itself.
+export function regionNote(R: Region, s: Site, mapNote: string): string {
+	const link = mapNote.replace(/\.md$/, '');
+	return [
+		'---',
+		`region: "${R.name}"`,
+		`place: ${s.n}`,
+		`kind: ${s.label.toLowerCase()}`,
+		'---',
+		`# ${s.name}`,
+		'',
+		`*${s.label} in ${R.name.replace(/^The /, 'the ')}, number ${s.n} on the [[${link}|map]].*`,
+		'',
+		s.line,
+		'',
+		s.kind === 'settlement' ? '## The town' : '## Inside',
+		'',
+		'```mapsmith',
+		...siteBlock(R, s),
+		'```',
+		'',
+		'## Notes',
+		'',
+		'',
+	].join('\n');
+}
