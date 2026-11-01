@@ -200,7 +200,9 @@ export class PluginSettingTab {
 
 export class Notice {
 	static last = '';
-	constructor(msg: string) { Notice.last = msg; }
+	/** The browser demo sets this to show notices on the page. */
+	static show: ((msg: string) => void) | null = null;
+	constructor(msg: string) { Notice.last = msg; Notice.show?.(msg); }
 }
 
 export const MarkdownRenderer = {

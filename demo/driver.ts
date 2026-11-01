@@ -1,6 +1,6 @@
 // Browser demo: runs the real Mapsmith plugin against the test shim over one note, with the block's text shown
 // beside the map so you can see the buttons rewrite it.
-import { App, installDomHelpers } from '../test/obsidian-shim';
+import { App, Notice, installDomHelpers } from '../test/obsidian-shim';
 import MapsmithPlugin from '../src/main';
 
 installDomHelpers();
@@ -68,4 +68,23 @@ document.querySelector('#theme')!.addEventListener('click', () => {
 	document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 	app.workspace.trigger('css-change', null);
 });
+// Notices show on the page the way Obsidian shows them, with any address in them as a link.
+const toast = document.querySelector<HTMLElement>('#notice')!;
+let hide = 0;
+Notice.show = (msg) => {
+	toast.replaceChildren();
+	for (const part of msg.split(/(https:\/\/[^\s]*[^\s.,])/)) {
+		if (part.startsWith('https://')) {
+			const a = document.createElement('a');
+			a.href = part;
+			a.textContent = part;
+			a.target = '_blank';
+			a.rel = 'noopener';
+			toast.append(a);
+		} else toast.append(part);
+	}
+	toast.hidden = false;
+	clearTimeout(hide);
+	hide = window.setTimeout(() => { toast.hidden = true; }, 10000);
+};
 draw();

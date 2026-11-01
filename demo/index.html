@@ -46,6 +46,11 @@ button.mod-cta { background: var(--interactive-accent); color: var(--text-on-acc
 textarea { width: 100%; box-sizing: border-box; height: 150px; font: 13px/1.4 ui-monospace, Menlo, Consolas, monospace; background: var(--background-secondary); color: var(--text-normal); border: 1px solid var(--background-modifier-border); border-radius: 6px; padding: 8px; }
 pre { white-space: pre-wrap; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; color: var(--text-muted); }
 aside h2 { font-size: 0.95em; margin: 14px 0 6px; }
+.get { border: 1px solid var(--background-modifier-border); border-radius: 8px; padding: 10px 12px; margin: 14px 0 0; font-size: 14px; }
+.get p { margin: 0 0 8px; }
+.get p:last-child { margin: 0; }
+a { color: var(--text-accent); }
+#notice { position: fixed; right: 16px; bottom: 16px; max-width: min(420px, calc(100vw - 32px)); background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 8px; padding: 10px 14px; font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.18); z-index: 10; }
 </style>
 </head>
 <body>
@@ -57,12 +62,17 @@ aside h2 { font-size: 0.95em; margin: 14px 0 6px; }
 	</main>
 	<aside>
 		<button id="theme">Light / dark</button>
+		<div class="get">
+			<p><b>Get Mapsmith</b>: it's free in Obsidian. Settings, Community plugins, Browse, search <b>Mapsmith</b>. Or <a href="https://community.obsidian.md/plugins/mapsmith">see it in Obsidian's list</a>.</p>
+			<p><b><a href="https://bananafestdestiny.itch.io/mapsmith-pro">Mapsmith Pro</a></b>, $6 once: saves any of these maps for Roll20 or Foundry, with the walls, doors and lights in.</p>
+		</div>
 		<h2>The block in the note</h2>
 		<textarea id="source" spellcheck="false"></textarea>
 		<h2>Notes it made</h2>
 		<pre id="made"></pre>
 	</aside>
 </div>
+<div id="notice" role="status" hidden></div>
 <script src="./demo.js"></script>
 </body>
 </html>
