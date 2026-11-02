@@ -100,6 +100,7 @@ void (async () => {
 	pv.saveVtt = async (data, svg, ...rest) => {
 		if (p.settings.vtt) return save(data, svg, ...rest);
 		const png = await pv.drawPng(data, svg);
+		count('preview');
 		void preview(data, png);
 	};
 	app.vault.on('modify', () => draw());
@@ -108,6 +109,7 @@ void (async () => {
 	app.vault.create = async (path, content) => {
 		if (path.endsWith('.dd2vtt')) {
 			download(path, content, 'application/json');
+			count('vtt');
 			return { path } as never;
 		}
 		const f = await create(path, content);
@@ -117,6 +119,7 @@ void (async () => {
 	const createBinary = app.vault.createBinary;
 	app.vault.createBinary = async (path, data) => {
 		download(path, data, 'image/png');
+		count('picture');
 		return createBinary(path, data);
 	};
 	for (const b of document.querySelectorAll<HTMLButtonElement>('[data-map]')) {
@@ -230,3 +233,14 @@ async function preview(d: UVTT, png: string) {
 	box.showModal();
 }
 $('#preview-close').addEventListener('click', () => $<HTMLDialogElement>('#preview').close());
+
+// What people press here, as bare counts: one GET to /e/mapsmith-<what>-<kind of map>, no cookie and no id.
+function count(what: string) {
+	if (location.hostname !== 'bulkhead.bananafest-destiny.com') return;
+	const kind = /^map:\s*(\w+)/m.exec(note())?.[1] ?? 'town';
+	void fetch(`/e/mapsmith-${what}-${kind}`, { keepalive: true, cache: 'no-store' }).catch(() => {});
+}
+document.addEventListener('click', (e) => {
+	const a = (e.target as Element).closest?.('a[href*="itch.io/mapsmith-pro"]');
+	if (a) count(a.closest('#preview') ? 'buy-preview' : 'buy');
+});
