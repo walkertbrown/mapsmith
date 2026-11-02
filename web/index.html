@@ -68,6 +68,13 @@ summary{cursor:pointer;font-weight:600}
 .about h2{font-size:1.05em;margin:22px 0 4px}
 .about p{margin:0;color:var(--text-normal)}
 footer{max-width:1180px;margin:0 auto;padding:0 16px 40px;font-size:13px;color:var(--text-muted)}
+#preview { max-width: min(1000px, calc(100vw - 32px)); border: 1px solid var(--background-modifier-border); border-radius: 10px; background: var(--background-primary); color: var(--text-normal); padding: 16px 20px; }
+#preview::backdrop { background: rgba(0,0,0,.6); }
+#preview h2 { margin: 0 0 6px; font-size: 20px; }
+#preview canvas { display: block; max-width: 100%; max-height: 65vh; margin: 10px auto; border-radius: 6px; }
+#preview .w { color: #e8322c; } #preview .d { color: #2f7cf6; } #preview .g { color: #2fbf5a; } #preview .l { color: #d9a514; }
+#preview .buy { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+#preview .buy a { display: inline-block; padding: 9px 14px; border-radius: 8px; background: var(--interactive-accent); color: var(--text-on-accent); font-weight: 700; text-decoration: none; }
 #notice { position: fixed; right: 16px; bottom: 16px; max-width: min(420px, calc(100vw - 32px)); background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 8px; padding: 10px 14px; font-size: 14px; box-shadow: 0 4px 16px rgba(0,0,0,.18); z-index: 10; }
 </style>
 <script src="https://pulse.bananafest-destiny.com/p.js" data-site="bulkhead.bananafest-destiny.com" defer></script>
@@ -115,6 +122,13 @@ footer{max-width:1180px;margin:0 auto;padding:0 16px 40px;font-size:13px;color:v
 	<p>The page's address always holds the map you're looking at. Copy link to this map and send it to your players or your group, and it opens on the same map.</p>
 </section>
 <footer><p>Your map and key stay in this browser. The page goes online only to check a Pro key or mail one. Mapsmith is open source (MIT). Made by Bananafest Destiny. The code was written with AI, and the textures under the maps came from an image generator; the maps are drawn by code.</p></footer>
+<dialog id="preview" aria-labelledby="preview-title">
+	<h2 id="preview-title">What Save for virtual tabletop would give you</h2>
+	<p>This map as a .dd2vtt: the players' map, with <b class="w">walls</b>, <b class="d">doors</b>, <b class="g">windows</b> and <b class="l">lights</b> placed, so Roll20 and Foundry know where tokens can walk and see. <span id="preview-count"></span></p>
+	<canvas></canvas>
+	<p class="buy"><a class="mod-cta" href="https://bananafestdestiny.itch.io/mapsmith-pro" target="_blank" rel="noopener">Mapsmith Pro, $6 once</a> <button type="button" id="preview-close">Close</button></p>
+	<p class="said">After you buy, paste your download page's address under Mapsmith Pro on this page. One key works here and in Obsidian.</p>
+</dialog>
 <div id="notice" role="status" hidden></div>
 <script src="./app.js"></script>
 </body>
